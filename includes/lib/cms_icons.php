@@ -89,7 +89,8 @@ function cms_icon_class(PDO $pdo, $iconId): ?string {
   $cols = cms_icons_table_columns($pdo, 'cms_icons');
   $familyField = cms_icons_pick_column($cols, ['iconfamilyv7']);
   $styleField = cms_icons_pick_column($cols, ['iconstylev7', 'iocnstylev7']);
-  $codeField = cms_icons_pick_column($cols, ['iconcodev7']);
+  $codeField = cms_icons_pick_column($cols, ['iconcodev7', 'code']);
+  $codeFallback = cms_icons_pick_column($cols, ['codev6', 'charcode']);
 
   if (!$codeField) {
     $cache[$iconId] = null;
@@ -110,6 +111,34 @@ function cms_icon_class(PDO $pdo, $iconId): ?string {
   $family = $prefFamily ?: ($familyField ? ($row[$familyField] ?? '') : '');
   $style = $prefStyle ?: ($styleField ? ($row[$styleField] ?? '') : '');
   $code = $row[$codeField] ?? '';
+  if ($code === '' && $codeFallback) {
+    $code = $row[$codeFallback] ?? '';
+  }
+
+  $brandTokens = ['facebook', 'twitter', 'x-twitter', 'instagram', 'linkedin', 'youtube', 'tiktok', 'whatsapp', 'snapchat', 'pinterest', 'github', 'gitlab', 'discord', 'reddit', 'slack', 'messenger'];
+  $isBrand = false;
+  foreach ($brandTokens as $token) {
+    if (stripos($code, $token) !== false) {
+      $isBrand = true;
+      break;
+    }
+  }
+
+  if ($family === '' && $style === '') {
+    $brandTokens = ['facebook', 'twitter', 'x-twitter', 'instagram', 'linkedin', 'youtube', 'tiktok', 'whatsapp', 'snapchat', 'pinterest', 'github', 'gitlab', 'discord', 'reddit', 'slack', 'messenger'];
+    $isBrand = false;
+    foreach ($brandTokens as $token) {
+      if (stripos($code, $token) !== false) {
+        $isBrand = true;
+        break;
+      }
+    }
+    $family = $isBrand ? 'fa-brands' : 'fa-solid';
+    $style = $family;
+  } elseif ($isBrand) {
+    $family = 'fa-brands';
+    $style = 'fa-brands';
+  }
 
   $cache[$iconId] = cms_icons_build_fa_class($family, $style, $code);
   return $cache[$iconId];
