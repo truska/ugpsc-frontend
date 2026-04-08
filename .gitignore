@@ -1,0 +1,17 @@
+# Exclude non-frontend deploy content
+filestore/
+wccms/
+stats/
+error/
+
+# Exclude root/system files you don't want deployed
+.htaccess
+inside.php
+truska.php
+
+# Local tooling/config noise
+tools/site_sync.conf
+.vscode/settings.json
+*.code-workspace
+*.log
+.DS_Store
