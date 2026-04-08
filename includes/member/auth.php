@@ -6,7 +6,7 @@ function mem_password_min_length(): int {
 }
 
 function mem_membership_currency_options(): array {
-  return ['GBP', 'EUR'];
+  return ['GBP'];
 }
 
 function mem_currency_symbol(string $currency): string {
@@ -56,10 +56,6 @@ function mem_membership_amount(string $currency, ?string $country = null): float
 }
 
 function mem_default_currency_for_country(?string $country = null): string {
-  $value = strtoupper(trim((string) $country));
-  if (in_array($value, ['IRELAND', 'REPUBLIC OF IRELAND', 'EIRE', 'IE', 'IRL'], true)) {
-    return 'EUR';
-  }
   return 'GBP';
 }
 
@@ -69,6 +65,83 @@ function mem_resolve_currency(string $value, ?string $country = null): string {
     return $currency;
   }
   return mem_default_currency_for_country($country);
+}
+
+function mem_country_options(): array {
+  global $pdo, $DB_OK;
+
+  if (!$DB_OK || !($pdo instanceof PDO)) {
+    return [];
+  }
+
+  try {
+    $stmt = $pdo->query(
+      "SELECT code, name, stripe_code
+       FROM country
+       WHERE archived = 0
+         AND allowbilling = 'Yes'
+         AND stripe_code IS NOT NULL
+         AND stripe_code <> ''
+       ORDER BY sort ASC, name ASC"
+    );
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    return $rows ?: [];
+  } catch (PDOException $e) {
+    return [];
+  }
+}
+
+function mem_country_lookup_by_code_or_name(string $value): ?array {
+  global $pdo, $DB_OK;
+
+  if (!$DB_OK || !($pdo instanceof PDO)) {
+    return null;
+  }
+  $trimmed = trim($value);
+  if ($trimmed === '') {
+    return null;
+  }
+
+  try {
+    $sql = 'SELECT code, name, stripe_code
+            FROM country
+            WHERE archived = 0
+              AND allowbilling = "Yes"
+              AND (code = :code OR name = :name)
+            LIMIT 1';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([
+      ':code' => strtoupper($trimmed),
+      ':name' => $trimmed,
+    ]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row ?: null;
+  } catch (PDOException $e) {
+    return null;
+  }
+}
+
+function mem_stripe_country_code(string $value): ?string {
+  $lookup = mem_country_lookup_by_code_or_name($value);
+  if (is_array($lookup) && !empty($lookup['stripe_code'])) {
+    return strtoupper((string) $lookup['stripe_code']);
+  }
+
+  $val = strtoupper(trim($value));
+  if ($val === '') {
+    return null;
+  }
+
+  $mapGb = ['UK', 'GB', 'GBR', 'ENGLAND', 'SCOTLAND', 'WALES', 'NORTHERN IRELAND', 'NI', 'NIR', 'NIRL'];
+  $mapIe = ['IE', 'IRL', 'IRE', 'IRELAND', 'REPUBLIC OF IRELAND', 'EIRE'];
+  if (in_array($val, $mapGb, true)) {
+    return 'GB';
+  }
+  if (in_array($val, $mapIe, true)) {
+    return 'IE';
+  }
+
+  return null;
 }
 
 function mem_format_date_uk(?string $dateValue): string {
@@ -324,7 +397,7 @@ function mem_request_password_reset(string $email): ?string {
 
   $token = bin2hex(random_bytes(32));
   $tokenHash = hash('sha256', $token);
-  $expiresAt = (new DateTime('+1 hour'))->format('Y-m-d H:i:s');
+  $expiresAt = (new DateTime('+2 hours'))->format('Y-m-d H:i:s');
 
   $sql = 'INSERT INTO mem_password_reset (member_id, token_hash, expires_at, request_ip) VALUES (:member_id, :token_hash, :expires_at, :request_ip)';
   $pdo->prepare($sql)->execute([

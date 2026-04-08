@@ -72,7 +72,7 @@ function mem_stripe_api_request(string $method, string $path, array $params = []
   return $data;
 }
 
-function mem_stripe_create_payment_intent(int $memberId, string $transactionType, string $currency, float $amount, array $metadata = [], string &$error = null): ?array {
+function mem_stripe_create_payment_intent(int $memberId, string $transactionType, string $currency, float $amount, array $metadata = [], string $receiptEmail = '', string &$error = null): ?array {
   $currency = mem_stripe_currency($currency);
   $amountCents = (int) round($amount * 100);
   if ($amountCents <= 0) {
@@ -91,6 +91,10 @@ function mem_stripe_create_payment_intent(int $memberId, string $transactionType
     ], $metadata),
     'payment_method_types[]' => 'card',
   ];
+
+  if (filter_var($receiptEmail, FILTER_VALIDATE_EMAIL)) {
+    $params['receipt_email'] = $receiptEmail;
+  }
 
   return mem_stripe_api_request('POST', 'payment_intents', $params, $error);
 }

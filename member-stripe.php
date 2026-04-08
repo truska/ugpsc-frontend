@@ -98,8 +98,19 @@ if ($action === 'create_intent') {
     'flow' => $flowName,
     'member_email' => (string) ($member['email'] ?? ''),
     'member_name' => mem_member_full_name($member),
+    'member_phone' => (string) ($member['tel1'] ?? ''),
+    'member_country' => mem_stripe_country_code((string) ($member['country'] ?? '')) ?: (string) ($member['country'] ?? ''),
+    'membership_number' => isset($member['membership_number']) ? (string) $member['membership_number'] : '',
   ];
-  $intent = mem_stripe_create_payment_intent($memberId, $transactionType, $currency, $amount, $meta, $error);
+  $intent = mem_stripe_create_payment_intent(
+    $memberId,
+    $transactionType,
+    $currency,
+    $amount,
+    $meta,
+    (string) ($member['email'] ?? ''),
+    $error
+  );
   if (!$intent) {
     mem_stripe_json_response(400, ['error' => $error ?: 'Could not create payment.']);
   }

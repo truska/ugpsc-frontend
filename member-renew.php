@@ -10,10 +10,9 @@ if (!$member) {
   exit;
 }
 
-$selectedCurrency = mem_resolve_currency((string) ($_POST['currency'] ?? ''), (string) ($member['country'] ?? ''));
+$selectedCurrency = 'GBP';
 $amount = mem_membership_amount($selectedCurrency, (string) ($member['country'] ?? ''));
 $isOverseas = mem_is_overseas_country((string) ($member['country'] ?? ''));
-$currencyOptions = mem_membership_currency_options();
 $stripeConfig = mem_stripe_config();
 $stripeReady = mem_stripe_ready();
 
@@ -42,15 +41,10 @@ mem_page_header('UGPSC Members | Renew Membership', ['active' => 'dashboard']);
               <label class="mem-label" for="card_name">Name on card</label>
               <input type="text" id="card_name" name="card_name" class="form-control" required>
             </div>
+            <input type="hidden" id="currency" name="currency" value="GBP">
             <div class="mb-3">
-              <label class="mem-label" for="currency">Currency</label>
-              <select id="currency" name="currency" class="form-select" required>
-                <?php foreach ($currencyOptions as $currencyCode): ?>
-                  <option value="<?php echo mem_h($currencyCode); ?>" <?php echo $selectedCurrency === $currencyCode ? 'selected' : ''; ?>>
-                    <?php echo mem_h($currencyCode . ' (' . mem_currency_symbol($currencyCode) . ')'); ?>
-                  </option>
-                <?php endforeach; ?>
-              </select>
+              <label class="mem-label">Currency</label>
+              <div class="form-control-plaintext fw-semibold">GBP (£)</div>
             </div>
             <div class="mb-3">
               <label class="mem-label" for="card-element">Card</label>
@@ -94,7 +88,10 @@ mem_page_header('UGPSC Members | Renew Membership', ['active' => 'dashboard']);
   const form = document.getElementById('stripe-form');
   const payButton = document.getElementById('pay-button');
   const payAmount = document.getElementById('pay-amount');
-  const currencyField = document.getElementById('currency');
+  const currencyValue = 'GBP';
+  const memberEmail = '<?php echo mem_h((string) ($member['email'] ?? '')); ?>';
+  const memberPhone = '<?php echo mem_h((string) ($member['tel1'] ?? '')); ?>';
+  const memberCountry = '<?php echo mem_h(mem_stripe_country_code((string) ($member['country'] ?? '')) ?? ''); ?>';
 
   let clientSecret = '';
   let intentId = '';
@@ -117,7 +114,7 @@ mem_page_header('UGPSC Members | Renew Membership', ['active' => 'dashboard']);
     formData.append('action', 'create_intent');
     formData.append('transaction_type', 'renewal');
     formData.append('flow', 'renew_logged_in');
-    formData.append('currency', currencyField.value);
+    formData.append('currency', currencyValue);
 
     fetch('<?php echo mem_base_url('/member-stripe.php'); ?>', {
       method: 'POST',
@@ -134,10 +131,6 @@ mem_page_header('UGPSC Members | Renew Membership', ['active' => 'dashboard']);
       setError(err.message);
     }).finally(() => setBusy(false));
   };
-
-  currencyField.addEventListener('change', () => {
-    createIntent();
-  });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -157,7 +150,12 @@ mem_page_header('UGPSC Members | Renew Membership', ['active' => 'dashboard']);
     const {error, paymentIntent} = await stripe.confirmCardPayment(clientSecret, {
       payment_method: {
         card,
-        billing_details: { name: cardName, email: '<?php echo mem_h((string) ($member['email'] ?? '')); ?>' }
+        billing_details: {
+          name: cardName,
+          email: memberEmail || undefined,
+          phone: memberPhone || undefined,
+          address: memberCountry ? { country: memberCountry } : undefined,
+        }
       }
     });
     if (error) {

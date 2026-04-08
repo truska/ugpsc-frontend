@@ -19,7 +19,7 @@ $form = [
   'address2' => trim((string) ($_POST['address2'] ?? '')),
   'town' => trim((string) ($_POST['town'] ?? '')),
   'county' => trim((string) ($_POST['county'] ?? '')),
-  'country' => trim((string) ($_POST['country'] ?? 'Ireland')),
+  'country' => trim((string) ($_POST['country'] ?? '')),
   'postcode' => trim((string) ($_POST['postcode'] ?? '')),
   'tel1' => trim((string) ($_POST['tel1'] ?? '')),
   'tel2' => trim((string) ($_POST['tel2'] ?? '')),
@@ -27,6 +27,12 @@ $form = [
   'gdpr_policy_accepted' => (string) ($_POST['gdpr_policy_accepted'] ?? ''),
   'gdpr_marketing_opt_in' => (string) ($_POST['gdpr_marketing_opt_in'] ?? ''),
 ];
+$countryOptions = mem_country_options();
+$defaultCountry = '';
+if ($form['country'] === '' && $countryOptions) {
+  $defaultCountry = (string) ($countryOptions[0]['code'] ?? '');
+  $form['country'] = $defaultCountry;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $csrf = (string) ($_POST['csrf_token'] ?? '');
@@ -122,7 +128,19 @@ mem_page_header('UGPSC Members | Join', ['active' => 'join']);
         </div>
         <div class="col-md-4">
           <label class="mem-label" for="country">Country</label>
-          <input type="text" class="form-control" id="country" name="country" value="<?php echo mem_h($form['country']); ?>">
+          <input type="text" class="form-control mb-2" id="country-search" placeholder="Search country...">
+          <select class="form-select" id="country" name="country" required>
+            <?php foreach ($countryOptions as $opt): ?>
+              <?php
+                $code = (string) ($opt['code'] ?? '');
+                $name = trim((string) ($opt['name'] ?? $code));
+                $selected = strtoupper($form['country']) === strtoupper($code) ? 'selected' : '';
+              ?>
+              <option value="<?php echo mem_h($code); ?>" <?php echo $selected; ?>>
+                <?php echo mem_h($name !== '' ? $name : $code); ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
         </div>
 
         <div class="col-md-4">
@@ -155,4 +173,39 @@ mem_page_header('UGPSC Members | Join', ['active' => 'join']);
     </form>
   </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const search = document.getElementById('country-search');
+  const select = document.getElementById('country');
+  if (!search || !select) return;
+
+  const allOptions = Array.from(select.options).map((opt) => ({
+    value: opt.value,
+    text: opt.text,
+    selected: opt.selected,
+  }));
+
+  const rebuild = (term) => {
+    const lower = term.toLowerCase();
+    const matches = allOptions.filter((opt) => lower === '' || opt.text.toLowerCase().includes(lower) || opt.value.toLowerCase().includes(lower));
+    const currentValue = select.value;
+    select.innerHTML = '';
+    matches.forEach((opt) => {
+      const el = document.createElement('option');
+      el.value = opt.value;
+      el.text = opt.text;
+      select.appendChild(el);
+    });
+    const hasCurrent = matches.some((opt) => opt.value === currentValue);
+    if (hasCurrent) {
+      select.value = currentValue;
+    } else if (matches[0]) {
+      select.value = matches[0].value;
+    }
+  };
+
+  rebuild(search.value);
+  search.addEventListener('input', () => rebuild(search.value));
+});
+</script>
 <?php mem_page_footer(); ?>
