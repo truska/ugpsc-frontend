@@ -30,6 +30,7 @@ $errors = [];
 $member = null;
 $history = [];
 $transactions = [];
+$memberTransactions = [];
 $quickRenewLink = null;
 $notices = [];
 $activeTab = (string) $activeTab;
@@ -150,6 +151,59 @@ if (!$errors && $member) {
           mem_log_event('admin_toggle_admin', 'Admin toggled admin flag to ' . $newStatus, null, $memberId);
           mem_log_change('toggle_admin', 'Admin toggled admin flag to ' . ($newStatus ? 'enabled' : 'disabled'), null, $memberId);
           $notices[] = 'Admin access ' . ($newStatus ? 'granted' : 'revoked') . '.';
+        } elseif ($action === 'refund_transaction') {
+          $txId = (int) ($_POST['transaction_id'] ?? 0);
+          $refundAmount = (float) ($_POST['refund_amount'] ?? 0);
+          $reason = trim((string) ($_POST['refund_reason'] ?? ''));
+          $comment = trim((string) ($_POST['refund_comment'] ?? ''));
+          if ($txId <= 0) {
+            $errors[] = 'No transaction selected for refund.';
+          } elseif (!mem_stripe_ready()) {
+            $errors[] = 'Stripe is not configured for refunds.';
+          } else {
+            $txStmt = $pdo->prepare('SELECT * FROM mem_transaction WHERE id = :id AND member_id = :member_id AND archived = 0 LIMIT 1');
+            $txStmt->execute([':id' => $txId, ':member_id' => $memberId]);
+            $tx = $txStmt->fetch(PDO::FETCH_ASSOC);
+            if (!$tx) {
+              $errors[] = 'Transaction not found.';
+            } elseif (strtolower((string) ($tx['payment_provider'] ?? '')) !== 'stripe') {
+              $errors[] = 'Only Stripe transactions can be refunded here.';
+            } elseif ((string) ($tx['status'] ?? '') === 'refunded') {
+              $errors[] = 'Transaction already refunded.';
+            } else {
+              $intentId = trim((string) ($tx['provider_reference'] ?? ''));
+              $txAmount = (float) ($tx['amount'] ?? 0);
+              $currency = (string) ($tx['currency'] ?? 'GBP');
+              if ($intentId === '') {
+                $errors[] = 'Missing provider reference for refund.';
+              } else {
+                if ($refundAmount <= 0 || $refundAmount > $txAmount) {
+                  $refundAmount = $txAmount;
+                }
+                $stripeError = null;
+                $refund = mem_stripe_refund_payment_intent($intentId, $refundAmount, $reason, $stripeError);
+                if (!$refund) {
+                  $errors[] = $stripeError ?: 'Refund failed.';
+                } else {
+                  $note = 'Refunded ' . mem_money_display($refundAmount, $currency);
+                  if ($reason !== '') {
+                    $note .= ' (' . $reason . ')';
+                  }
+                  if ($comment !== '') {
+                    $note .= ' | ' . $comment;
+                  }
+                  $upd = $pdo->prepare('UPDATE mem_transaction SET status = "refunded", notes = :notes, modified = NOW() WHERE id = :id LIMIT 1');
+                  $upd->execute([
+                    ':notes' => $note,
+                    ':id' => $txId,
+                  ]);
+                  mem_log_event('admin_refund', 'Refunded transaction ' . $txId . ' via Stripe', null, $memberId);
+                  mem_log_change('transaction_refund', 'Refunded ' . mem_money_display($refundAmount, $currency), $note, $memberId);
+                  $notices[] = 'Refund requested for ' . mem_money_display($refundAmount, $currency) . '.';
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -181,7 +235,18 @@ if (!$errors && $member) {
       }
     }
 
-    // Transactions will be wired back in when the tab is reintroduced.
+    if (mem_table_exists('mem_transaction')) {
+      $stmt = $pdo->prepare(
+        'SELECT id, transaction_type, payment_provider, payment_method, provider_reference, amount, currency, status, paid_at, notes, created
+         FROM mem_transaction
+         WHERE member_id = :member_id
+           AND archived = 0
+         ORDER BY COALESCE(paid_at, created) DESC
+         LIMIT 25'
+      );
+      $stmt->execute([':member_id' => $memberId]);
+      $memberTransactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
   }
 }
 
@@ -498,6 +563,68 @@ mem_page_header('UGPSC Admin | Member', ['active' => 'admin']);
               </div>
             </div>
           </div>
+          <div class="row g-3 g-lg-4 mt-2">
+            <div class="col-12">
+              <div class="p-3 border rounded h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <div class="mem-label mb-0">Recent Transactions</div>
+                  <span class="badge text-bg-light">Stripe refunds supported</span>
+                </div>
+                <?php if ($memberTransactions): ?>
+                  <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                      <thead>
+                        <tr>
+                          <th scope="col">Date</th>
+                          <th scope="col">Type</th>
+                          <th scope="col">Amount</th>
+                          <th scope="col">Status</th>
+                          <th scope="col">Provider</th>
+                          <th scope="col">Reference</th>
+                          <th scope="col">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <?php foreach ($memberTransactions as $tx): ?>
+                          <?php
+                            $paidAt = mem_format_date_uk((string) ($tx['paid_at'] ?? $tx['created'] ?? ''));
+                            $amount = isset($tx['amount']) ? (float) $tx['amount'] : 0.0;
+                            $currency = (string) ($tx['currency'] ?? 'GBP');
+                            $isRefundable = strtolower((string) ($tx['payment_provider'] ?? '')) === 'stripe' && (string) ($tx['status'] ?? '') !== 'refunded';
+                          ?>
+                          <tr>
+                            <td><?php echo mem_h($paidAt !== '' ? $paidAt : '—'); ?></td>
+                            <td class="text-capitalize"><?php echo mem_h((string) ($tx['transaction_type'] ?? '')); ?></td>
+                            <td><?php echo mem_h(mem_money_display($amount, $currency)); ?></td>
+                            <td class="text-capitalize"><?php echo mem_h((string) ($tx['status'] ?? '')); ?></td>
+                            <td><?php echo mem_h((string) ($tx['payment_provider'] ?? '')); ?></td>
+                            <td class="small"><?php echo mem_h((string) ($tx['provider_reference'] ?? '')); ?></td>
+                            <td>
+                              <?php if ($isRefundable): ?>
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#refundModal"
+                                        data-tx-id="<?php echo (int) ($tx['id'] ?? 0); ?>"
+                                        data-amount="<?php echo mem_h((string) $amount); ?>"
+                                        data-currency="<?php echo mem_h($currency); ?>">
+                                  Refund
+                                </button>
+                              <?php else: ?>
+                                <span class="text-secondary small">—</span>
+                              <?php endif; ?>
+                            </td>
+                          </tr>
+                        <?php endforeach; ?>
+                      </tbody>
+                    </table>
+                  </div>
+                <?php else: ?>
+                  <div class="text-secondary small">No transactions for this member yet.</div>
+                <?php endif; ?>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="tab-pane fade <?php echo $activeTab === 'email' ? 'show active' : ''; ?>" id="email" role="tabpanel" aria-labelledby="email-tab" data-admin-pane="email">
@@ -633,5 +760,77 @@ mem_page_header('UGPSC Admin | Member', ['active' => 'admin']);
       });
     });
   })();
+</script>
+<div class="modal fade" id="refundModal" tabindex="-1" aria-labelledby="refundModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post">
+        <div class="modal-header">
+          <h5 class="modal-title" id="refundModalLabel">Refund Payment</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" name="csrf_token" value="<?php echo mem_h(mem_csrf_token()); ?>">
+          <input type="hidden" name="member_id" value="<?php echo (int) $memberId; ?>">
+          <input type="hidden" name="tab" value="actions">
+          <input type="hidden" name="action" value="refund_transaction">
+          <input type="hidden" name="transaction_id" id="refund-tx-id" value="">
+          <div class="mb-3">
+            <label for="refund-amount" class="form-label mem-label">Amount</label>
+            <input type="number" step="0.01" min="0.01" class="form-control" id="refund-amount" name="refund_amount" required>
+            <div class="form-text">Max: <span id="refund-max"></span></div>
+          </div>
+          <div class="mb-3">
+            <label for="refund-reason" class="form-label mem-label">Reason</label>
+            <select class="form-select" id="refund-reason" name="refund_reason" required>
+              <option value="requested_by_customer">Requested by customer</option>
+              <option value="duplicate">Duplicate</option>
+              <option value="fraudulent">Fraudulent</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="refund-comment" class="form-label mem-label">Comment (optional)</label>
+            <input type="text" class="form-control" id="refund-comment" name="refund_comment" placeholder="Notes for internal tracking">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger">Process Refund</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const modalEl = document.getElementById('refundModal');
+  if (!modalEl) return;
+  const modalInstance = (window.bootstrap && window.bootstrap.Modal) ? new window.bootstrap.Modal(modalEl) : null;
+  const triggerButtons = document.querySelectorAll('[data-bs-target="#refundModal"]');
+  triggerButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (modalInstance) {
+        modalInstance.show(btn);
+      }
+    });
+  });
+
+  modalEl.addEventListener('show.bs.modal', (event) => {
+    const button = event.relatedTarget;
+    const txId = button?.getAttribute('data-tx-id') || '';
+    const amount = button?.getAttribute('data-amount') || '';
+    const currency = button?.getAttribute('data-currency') || 'GBP';
+    const txInput = modalEl.querySelector('#refund-tx-id');
+    const amtInput = modalEl.querySelector('#refund-amount');
+    const maxSpan = modalEl.querySelector('#refund-max');
+    if (txInput) txInput.value = txId;
+    if (amtInput) {
+      amtInput.value = amount;
+      amtInput.max = amount;
+    }
+    if (maxSpan) maxSpan.textContent = amount + ' ' + currency;
+  });
+});
 </script>
 <?php mem_page_footer(); ?>

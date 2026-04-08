@@ -108,6 +108,27 @@ function mem_stripe_retrieve_payment_intent(string $intentId, string &$error = n
   return mem_stripe_api_request('GET', 'payment_intents/' . urlencode($intentId), [], $error);
 }
 
+function mem_stripe_refund_payment_intent(string $intentId, ?float $amount = null, string $reason = '', string &$error = null): ?array {
+  $intentId = trim($intentId);
+  if ($intentId === '') {
+    $error = 'Missing payment intent id.';
+    return null;
+  }
+
+  $params = [
+    'payment_intent' => $intentId,
+  ];
+  if ($amount !== null && $amount > 0) {
+    $params['amount'] = (int) round($amount * 100);
+  }
+  $allowedReasons = ['duplicate', 'fraudulent', 'requested_by_customer'];
+  if ($reason !== '' && in_array($reason, $allowedReasons, true)) {
+    $params['reason'] = $reason;
+  }
+
+  return mem_stripe_api_request('POST', 'refunds', $params, $error);
+}
+
 function mem_record_membership_transaction_pending(int $memberId, string $transactionType, string $providerRef, float $amount, string $currency, string $notes = ''): ?int {
   global $pdo, $DB_OK;
 
