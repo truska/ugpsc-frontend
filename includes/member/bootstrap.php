@@ -151,11 +151,62 @@ function mem_log_change(string $action, string $summary = '', ?string $sqlText =
   );
 }
 
+function mem_email_footer(): array {
+  $company = trim((string) cms_pref('prefCompanyName', 'UGPSC'));
+  $logoFile = trim((string) cms_pref('prefLogoEmail', '', 'web'));
+  if ($logoFile === '') {
+    $logoFile = trim((string) cms_pref('prefLogo', '', 'web'));
+  }
+  if ($logoFile === '') {
+    $logoFile = 'ugpsc-logo.png';
+  }
+
+  $base = mem_base_url();
+  if (preg_match('#^https?://#i', $logoFile) || str_starts_with($logoFile, '/')) {
+    $logoUrl = $logoFile;
+  } else {
+    $logoUrl = $base . '/filestore/images/logos/' . ltrim($logoFile, '/');
+  }
+
+  $html = '<p style="margin:0 0 8px 0;">Kind regards<br><strong>' . mem_h($company) . '</strong></p>';
+  if ($logoUrl !== '') {
+    $html .= '<p style="margin:0;"><img src="' . mem_h($logoUrl) . '" alt="' . mem_h($company) . ' logo" style="max-width:200px;height:auto;"></p>';
+  }
+
+  $text = "Kind regards\n" . $company . "\n";
+  return ['html' => $html, 'text' => $text];
+}
+
 function mem_send_mail(string $to, string $subject, string $htmlBody, string $textBody = ''): bool {
+  // Prefer the CMS mailer so we respect SMTP/From/BCC prefs defined in cms_preferences.
+  if (!function_exists('cms_send_mail')) {
+    $cmsEmailPath = __DIR__ . '/../../wccms/includes/email.php';
+    if (file_exists($cmsEmailPath)) {
+      require_once $cmsEmailPath;
+    }
+  }
+
+  $footer = mem_email_footer();
+  $htmlBody .= $footer['html'];
+  $textBody = ($textBody !== '' ? $textBody . "\n\n" : '') . $footer['text'];
+
+  if (function_exists('cms_send_mail')) {
+    // Pass addSignature=false (7th arg) to avoid the CMS global signature/second logo.
+    return cms_send_mail($to, $subject, $htmlBody, $textBody, 'web', false, false);
+  }
+
+  // Fallback: minimal PHP mail() using pref values when available.
+  $fromEmail = cms_pref('prefEmailSendFrom', 'no-reply@' . ($_SERVER['HTTP_HOST'] ?? 'localhost'), 'web');
+  $fromName = cms_pref('prefEmailSendFrom', 'UGPSC Members', 'web');
+  $bccRaw = cms_pref('prefEmailBCC', '', 'web');
+
   $headers = [];
   $headers[] = 'MIME-Version: 1.0';
   $headers[] = 'Content-Type: text/html; charset=UTF-8';
-  $headers[] = 'From: UGPSC Members <no-reply@' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '>';
+  $headers[] = 'From: ' . $fromName . ' <' . $fromEmail . '>';
+  if ($bccRaw !== '') {
+    $headers[] = 'Bcc: ' . $bccRaw;
+  }
 
   if ($textBody !== '') {
     $htmlBody .= '<hr><pre style="font-family:monospace;white-space:pre-wrap">' . mem_h($textBody) . '</pre>';

@@ -397,7 +397,9 @@ function mem_request_password_reset(string $email): ?string {
 
   $token = bin2hex(random_bytes(32));
   $tokenHash = hash('sha256', $token);
-  $expiresAt = (new DateTime('+2 hours'))->format('Y-m-d H:i:s');
+  // Use server (UTC/GMT) time to avoid DST drift between PHP and MySQL.
+  $nowUtc = new DateTime('now', new DateTimeZone('UTC'));
+  $expiresAt = $nowUtc->modify('+1 hour')->format('Y-m-d H:i:s');
 
   $sql = 'INSERT INTO mem_password_reset (member_id, token_hash, expires_at, request_ip) VALUES (:member_id, :token_hash, :expires_at, :request_ip)';
   $pdo->prepare($sql)->execute([
