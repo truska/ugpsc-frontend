@@ -46,6 +46,7 @@ $pageData = null;
 $pageContentItems = [];
 $pageLayoutFile = null;
 $pageNotFound = false;
+$pageSearchAllowed = true;
 
 if (!cms_table_exists_local('pages')) {
   $pageTitle = cms_pref('prefSiteName', 'WCCMS');
@@ -70,6 +71,7 @@ try {
 
 if (!$pageData) {
   $pageNotFound = true;
+  $pageSearchAllowed = false;
   http_response_code(404);
   $pageTitle = 'Page Not Found';
   return;
@@ -78,6 +80,10 @@ if (!$pageData) {
 $pageTitle = $pageData['titletag'] ?? $pageData['name'] ?? $pageData['title'] ?? cms_pref('prefSiteName', 'WCCMS');
 $pageMetaDescription = $pageData['metadescription'] ?? '';
 $pageMetaKeywords = $pageData['metakeywords'] ?? '';
+$pageSearchAllowed = true;
+if (isset($pageData['pagesearch'])) {
+  $pageSearchAllowed = (string) $pageData['pagesearch'] === 'Yes';
+}
 
 // Detect layout table for content blocks.
 $layoutTable = null;
