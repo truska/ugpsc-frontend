@@ -790,7 +790,7 @@ mem_page_header('UGPSC Admin | Member', ['active' => 'admin']);
           </div>
           <div class="mb-3">
             <label for="refund-comment" class="form-label mem-label">Comment (optional)</label>
-            <input type="text" class="form-control" id="refund-comment" name="refund_comment" placeholder="Notes for internal tracking">
+            <textarea class="form-control" id="refund-comment" name="refund_comment" rows="3" placeholder="Notes for internal tracking"></textarea>
           </div>
         </div>
         <div class="modal-footer">
@@ -805,19 +805,11 @@ mem_page_header('UGPSC Admin | Member', ['active' => 'admin']);
 document.addEventListener('DOMContentLoaded', () => {
   const modalEl = document.getElementById('refundModal');
   if (!modalEl) return;
-  const modalInstance = (window.bootstrap && window.bootstrap.Modal) ? new window.bootstrap.Modal(modalEl) : null;
-  const triggerButtons = document.querySelectorAll('[data-bs-target="#refundModal"]');
-  triggerButtons.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (modalInstance) {
-        modalInstance.show(btn);
-      }
-    });
-  });
+  const hasBootstrap = !!(window.bootstrap && window.bootstrap.Modal);
+  const modalInstance = hasBootstrap ? new window.bootstrap.Modal(modalEl) : null;
+  const body = document.body;
 
-  modalEl.addEventListener('show.bs.modal', (event) => {
-    const button = event.relatedTarget;
+  const fillModal = (button) => {
     const txId = button?.getAttribute('data-tx-id') || '';
     const amount = button?.getAttribute('data-amount') || '';
     const currency = button?.getAttribute('data-currency') || 'GBP';
@@ -830,6 +822,54 @@ document.addEventListener('DOMContentLoaded', () => {
       amtInput.max = amount;
     }
     if (maxSpan) maxSpan.textContent = amount + ' ' + currency;
+  };
+
+  const fallbackShow = () => {
+    modalEl.classList.add('show');
+    modalEl.style.display = 'block';
+    modalEl.removeAttribute('aria-hidden');
+    body.classList.add('modal-open');
+  };
+
+  const fallbackHide = () => {
+    modalEl.classList.remove('show');
+    modalEl.style.display = 'none';
+    modalEl.setAttribute('aria-hidden', 'true');
+    body.classList.remove('modal-open');
+  };
+
+  const triggerButtons = document.querySelectorAll('[data-bs-target="#refundModal"]');
+  triggerButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      fillModal(btn);
+      if (modalInstance) {
+        modalInstance.show(btn);
+      } else {
+        fallbackShow();
+      }
+    });
+  });
+
+  modalEl.addEventListener('show.bs.modal', (event) => {
+    const button = event.relatedTarget;
+    fillModal(button);
+  });
+
+  const closeButtons = modalEl.querySelectorAll('[data-bs-dismiss="modal"]');
+  closeButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      if (!modalInstance) {
+        e.preventDefault();
+        fallbackHide();
+      }
+    });
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modalInstance && modalEl.classList.contains('show')) {
+      fallbackHide();
+    }
   });
 });
 </script>
