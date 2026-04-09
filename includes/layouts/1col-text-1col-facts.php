@@ -5,8 +5,8 @@
  */
 
 $facts = cms_load_facts_for_content((int) ($contentItem['id'] ?? 0));
-$sectionLabel = trim((string) ($contentItem['name'] ?? ''));
 $factLinks = [];
+$subheading1 = trim((string) ($contentSubheading1 ?? $contentItem['subheading1'] ?? $contentItem['subheading_1'] ?? ''));
 // Prefer pre-normalized links from includes/content.php; fall back to raw fields if missing.
 if (!empty($contentLinks) && is_array($contentLinks)) {
   foreach ($contentLinks as $link) {
@@ -49,15 +49,22 @@ if (!empty($contentLinks) && is_array($contentLinks)) {
 
 <section class="facts-split-section cms-content-block <?php echo cms_h($contentPaddingClass); ?>">
   <div class="container">
+    <?php if (($contentHeading !== '' && $contentShowHeading === 'Yes') || $contentSubheading !== ''): ?>
+      <div class="facts-split-heading mb-4 text-center">
+        <?php if ($contentHeading !== '' && $contentShowHeading === 'Yes'): ?>
+          <h1 class="section-title"><?php echo cms_h($contentHeading); ?></h1>
+        <?php endif; ?>
+        <?php if ($contentSubheading !== ''): ?>
+          <h2 class="section-subtitle h4 text-secondary mb-0"><?php echo cms_h($contentSubheading); ?></h2>
+        <?php endif; ?>
+      </div>
+    <?php endif; ?>
     <div class="facts-split-panel">
       <div class="row g-4 align-items-center">
         <div class="col-lg-6">
           <div class="facts-copy">
-            <?php if ($sectionLabel !== ''): ?>
-              <span class="section-tag"><?php echo cms_h($sectionLabel); ?></span>
-            <?php endif; ?>
-            <?php if ($contentHeading !== '' && $contentShowHeading === 'Yes'): ?>
-              <<?php echo cms_h($contentHeadingTag); ?> class="section-title"><?php echo cms_h($contentHeading); ?></<?php echo cms_h($contentHeadingTag); ?>>
+            <?php if ($subheading1 !== ''): ?>
+              <h3 class="section-subtitle"><?php echo cms_h($subheading1); ?></h3>
             <?php endif; ?>
             <?php if ($contentText !== ''): ?>
               <div class="section-copy content-body"><?php echo $contentText; ?></div>
