@@ -31,6 +31,7 @@ $member = null;
 $history = [];
 $transactions = [];
 $memberTransactions = [];
+$historyTxMap = [];
 $quickRenewLink = null;
 $notices = [];
 $activeTab = (string) $activeTab;
@@ -246,6 +247,30 @@ if (!$errors && $member) {
       );
       $stmt->execute([':member_id' => $memberId]);
       $memberTransactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+      // Map transactions by ID for membership history lookup/refunds.
+      $historyTxIds = [];
+      foreach ($history as $row) {
+        $txId = (int) ($row['transaction_id'] ?? 0);
+        if ($txId > 0) {
+          $historyTxIds[$txId] = true;
+        }
+      }
+      $historyTxIds = array_keys($historyTxIds);
+      if ($historyTxIds) {
+        $placeholders = implode(',', array_fill(0, count($historyTxIds), '?'));
+        $txStmt = $pdo->prepare(
+          'SELECT id, payment_provider, amount, currency, status
+           FROM mem_transaction
+           WHERE id IN (' . $placeholders . ')
+             AND archived = 0'
+        );
+        $txStmt->execute($historyTxIds);
+        $historyTxMap = [];
+        while ($tx = $txStmt->fetch(PDO::FETCH_ASSOC)) {
+          $historyTxMap[(int) $tx['id']] = $tx;
+        }
+      }
     }
   }
 }
@@ -405,8 +430,10 @@ mem_page_header('UGPSC Admin | Member', ['active' => 'admin']);
                     <th scope="col">Source</th>
                     <th scope="col">Amount</th>
                     <th scope="col">Paid Via</th>
+                    <th scope="col">Status</th>
                     <th scope="col">Notes</th>
                     <th scope="col">Added</th>
+                    <th scope="col">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -417,14 +444,45 @@ mem_page_header('UGPSC Admin | Member', ['active' => 'admin']);
                       $amount = (float) ($row['amount'] ?? 0.0);
                       $currency = (string) ($row['currency'] ?? 'GBP');
                       $paidVia = (string) ($row['paid_via'] ?? ($row['source'] ?? ''));
+                      $txId = (int) ($row['transaction_id'] ?? 0);
+                      $tx = $txId > 0 ? ($historyTxMap[$txId] ?? null) : null;
+                      $txAmount = isset($tx['amount']) ? (float) $tx['amount'] : null;
+                      $txCurrency = (string) ($tx['currency'] ?? $currency);
+                      $displayAmount = $amount > 0 ? mem_money_display($amount, $currency) : ($txAmount !== null ? mem_money_display($txAmount, $txCurrency) : '—');
+                      $txProvider = (string) ($tx['payment_provider'] ?? '');
+                      $txStatus = strtolower((string) ($tx['status'] ?? ''));
+                      $statusLabel = $txStatus !== '' ? ucfirst($txStatus) : '—';
+                      $isRefunded = $txStatus === 'refunded';
+                      if ($isRefunded) {
+                        $displayAmount = '−' . mem_money_display($txAmount ?? $amount, $txCurrency);
+                      }
+                      $isRefundable = $tx && strtolower($txProvider) === 'stripe' && strtolower($txStatus) !== 'refunded';
                     ?>
                     <tr>
                       <td><?php echo $year; ?></td>
                       <td class="text-capitalize"><?php echo mem_h((string) ($row['source'] ?? '')); ?></td>
-                      <td><?php echo $amount > 0 ? mem_h(mem_money_display($amount, $currency)) : '—'; ?></td>
-                      <td class="small text-secondary"><?php echo mem_h($paidVia); ?></td>
+                      <td><?php echo mem_h($displayAmount); ?></td>
+                      <td class="small text-secondary"><?php echo mem_h($paidVia !== '' ? $paidVia : $txProvider); ?></td>
+                      <td class="small <?php echo $isRefunded ? 'text-danger fw-semibold' : 'text-secondary'; ?>">
+                        <?php echo mem_h($statusLabel); ?>
+                      </td>
                       <td class="small text-secondary"><?php echo mem_h((string) ($row['notes'] ?? '')); ?></td>
                       <td class="text-secondary small"><?php echo $created !== '' ? mem_h($created) : '—'; ?></td>
+                      <td>
+                        <?php if ($isRefundable): ?>
+                          <button type="button"
+                                  class="btn btn-sm btn-outline-danger"
+                                  data-bs-toggle="modal"
+                                  data-bs-target="#refundModal"
+                                  data-tx-id="<?php echo (int) $txId; ?>"
+                                  data-amount="<?php echo mem_h((string) ($txAmount ?? 0)); ?>"
+                                  data-currency="<?php echo mem_h($txCurrency); ?>">
+                            Refund
+                          </button>
+                        <?php else: ?>
+                          <span class="text-secondary small">—</span>
+                        <?php endif; ?>
+                      </td>
                     </tr>
                   <?php endforeach; ?>
                 </tbody>
@@ -590,13 +648,16 @@ mem_page_header('UGPSC Admin | Member', ['active' => 'admin']);
                             $paidAt = mem_format_date_uk((string) ($tx['paid_at'] ?? $tx['created'] ?? ''));
                             $amount = isset($tx['amount']) ? (float) $tx['amount'] : 0.0;
                             $currency = (string) ($tx['currency'] ?? 'GBP');
-                            $isRefundable = strtolower((string) ($tx['payment_provider'] ?? '')) === 'stripe' && (string) ($tx['status'] ?? '') !== 'refunded';
+                            $status = strtolower((string) ($tx['status'] ?? ''));
+                            $isRefund = $status === 'refunded';
+                            $isRefundable = strtolower((string) ($tx['payment_provider'] ?? '')) === 'stripe' && !$isRefund;
+                            $displayAmount = $isRefund ? '−' . mem_money_display($amount, $currency) : mem_money_display($amount, $currency);
                           ?>
                           <tr>
                             <td><?php echo mem_h($paidAt !== '' ? $paidAt : '—'); ?></td>
                             <td class="text-capitalize"><?php echo mem_h((string) ($tx['transaction_type'] ?? '')); ?></td>
-                            <td><?php echo mem_h(mem_money_display($amount, $currency)); ?></td>
-                            <td class="text-capitalize"><?php echo mem_h((string) ($tx['status'] ?? '')); ?></td>
+                            <td><?php echo mem_h($displayAmount); ?></td>
+                            <td class="text-capitalize <?php echo $isRefund ? 'text-danger fw-semibold' : ''; ?>"><?php echo mem_h((string) ($tx['status'] ?? '')); ?></td>
                             <td><?php echo mem_h((string) ($tx['payment_provider'] ?? '')); ?></td>
                             <td class="small"><?php echo mem_h((string) ($tx['provider_reference'] ?? '')); ?></td>
                             <td>
