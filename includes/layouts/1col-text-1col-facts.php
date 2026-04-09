@@ -6,6 +6,44 @@
 
 $facts = cms_load_facts_for_content((int) ($contentItem['id'] ?? 0));
 $sectionLabel = trim((string) ($contentItem['name'] ?? ''));
+$factLinks = [];
+// Prefer pre-normalized links from includes/content.php; fall back to raw fields if missing.
+if (!empty($contentLinks) && is_array($contentLinks)) {
+  foreach ($contentLinks as $link) {
+    $label = trim((string) ($link['label'] ?? ''));
+    $url = trim((string) ($link['url'] ?? ''));
+    if ($label === '' || $url === '') {
+      continue;
+    }
+    $factLinks[] = [
+      'label' => $label,
+      'url' => $url,
+      'icon' => $link['icon'] ?? null,
+      'target' => ($link['target'] ?? 'self') === 'blank' ? 'blank' : 'self',
+    ];
+  }
+} else {
+  for ($i = 1; $i <= 3; $i++) {
+    $linkLabel = trim((string) ($contentItem['link_label_' . $i] ?? ''));
+    $linkUrl = trim((string) ($contentItem['link_url_' . $i] ?? ''));
+    if ($linkLabel === '' || $linkUrl === '') {
+      continue;
+    }
+
+    $iconClass = null;
+    $iconId = $contentItem['link_icon_' . $i] ?? null;
+    if ($iconId !== null && function_exists('cms_icon_class') && isset($DB_OK, $pdo) && $DB_OK && $pdo instanceof PDO) {
+      $iconClass = cms_icon_class($pdo, $iconId);
+    }
+
+    $factLinks[] = [
+      'label' => $linkLabel,
+      'url' => $linkUrl,
+      'icon' => $iconClass,
+      'target' => ((string) ($contentItem['link_target_' . $i] ?? 'self')) === 'blank' ? 'blank' : 'self',
+    ];
+  }
+}
 ?>
 <!-- layout=1col-text-1col-facts.php layout_url=<?php echo cms_h((string) ($contentItem['layout_url'] ?? '')); ?> content_id=<?php echo cms_h((string) ($contentItem['id'] ?? '')); ?> -->
 
@@ -27,9 +65,24 @@ $sectionLabel = trim((string) ($contentItem['name'] ?? ''));
             <?php if ($contentText2 !== ''): ?>
               <div class="section-copy content-body mt-3"><?php echo $contentText2; ?></div>
             <?php endif; ?>
-            <div class="mt-3">
-              <a href="#" class="btn btn-section-link">Read More...</a>
-            </div>
+            <?php if ($factLinks): ?>
+              <div class="mt-3 d-flex flex-wrap gap-2">
+                <?php foreach ($factLinks as $link): ?>
+                  <a
+                    href="<?php echo cms_h($link['url']); ?>"
+                    class="btn btn-section-link"
+                    <?php if (($link['target'] ?? 'self') === 'blank'): ?>
+                      target="_blank" rel="noopener"
+                    <?php endif; ?>
+                  >
+                    <?php if (!empty($link['icon'])): ?>
+                      <i class="<?php echo cms_h($link['icon']); ?> me-1"></i>
+                    <?php endif; ?>
+                    <span><?php echo cms_h($link['label']); ?></span>
+                  </a>
+                <?php endforeach; ?>
+              </div>
+            <?php endif; ?>
           </div>
         </div>
         <div class="col-lg-6">

@@ -76,6 +76,27 @@ foreach ($pageContentItems as $contentItem) {
     $contentPageId = $contentItem['pageid'] ?? null;
     $contentDate = $contentItem['date'] ?? null;
     $contentAuthor = $contentItem['author'] ?? '';
+    $contentLinks = [];
+    for ($linkIndex = 1; $linkIndex <= 3; $linkIndex++) {
+      $url = trim((string) ($contentItem['link_url_' . $linkIndex] ?? ''));
+      $label = trim((string) ($contentItem['link_label_' . $linkIndex] ?? ''));
+      $iconId = $contentItem['link_icon_' . $linkIndex] ?? null;
+      $target = strtolower(trim((string) ($contentItem['link_target_' . $linkIndex] ?? 'self')));
+      $target = $target === 'blank' ? 'blank' : 'self';
+      $iconClass = null;
+      if ($iconId !== null && function_exists('cms_icon_class') && isset($DB_OK, $pdo) && $DB_OK && $pdo instanceof PDO) {
+        $iconClass = cms_icon_class($pdo, $iconId);
+      }
+      if ($url !== '') {
+        $contentLinks[] = [
+          'id' => $linkIndex,
+          'url' => $url,
+          'label' => $label !== '' ? $label : 'Link ' . $linkIndex,
+          'icon' => $iconClass,
+          'target' => $target,
+        ];
+      }
+    }
     $contentIndexValue = $contentIndex;
     $contentIsEven = ($contentIndex % 2) === 0;
     $contentHeadingTag = 'h2';

@@ -60,6 +60,82 @@ function cms_icons_build_fa_class(?string $family, ?string $style, ?string $code
   return implode(' ', array_unique($classes));
 }
 
+function cms_icons_normalize_fa_class_token(string $token): string {
+  $token = strtolower(cms_icons_normalize_fa_token($token));
+  if ($token === '') {
+    return '';
+  }
+
+  $legacyMap = [
+    'fa' => 'fa-solid',
+    'fas' => 'fa-solid',
+    'far' => 'fa-regular',
+    'fab' => 'fa-brands',
+    'fal' => 'fa-light',
+    'fat' => 'fa-thin',
+    'fad' => 'fa-duotone',
+  ];
+
+  if (isset($legacyMap[$token])) {
+    return $legacyMap[$token];
+  }
+
+  $styleMap = [
+    'solid' => 'fa-solid',
+    'regular' => 'fa-regular',
+    'brands' => 'fa-brands',
+    'brand' => 'fa-brands',
+    'light' => 'fa-light',
+    'thin' => 'fa-thin',
+    'duotone' => 'fa-duotone',
+  ];
+
+  if (isset($styleMap[$token])) {
+    return $styleMap[$token];
+  }
+
+  return str_starts_with($token, 'fa-') ? $token : 'fa-' . $token;
+}
+
+function cms_icons_class_from_spec(?string $iconSpec): ?string {
+  $iconSpec = trim((string) $iconSpec);
+  if ($iconSpec === '') {
+    return null;
+  }
+
+  $parts = preg_split('/[\\s,|]+/', $iconSpec);
+  if (!is_array($parts) || !$parts) {
+    return null;
+  }
+
+  $classes = [];
+  foreach ($parts as $part) {
+    $class = cms_icons_normalize_fa_class_token((string) $part);
+    if ($class !== '') {
+      $classes[] = $class;
+    }
+  }
+
+  if (!$classes) {
+    return null;
+  }
+
+  $stylePrefixes = ['fa-solid', 'fa-regular', 'fa-brands', 'fa-light', 'fa-thin', 'fa-duotone'];
+  $hasStyle = false;
+  foreach ($classes as $class) {
+    if (in_array($class, $stylePrefixes, true)) {
+      $hasStyle = true;
+      break;
+    }
+  }
+
+  if (!$hasStyle) {
+    array_unshift($classes, 'fa-solid');
+  }
+
+  return implode(' ', array_values(array_unique($classes)));
+}
+
 function cms_icon_class(PDO $pdo, $iconId): ?string {
   static $cache = [];
 
@@ -110,9 +186,25 @@ function cms_icon_class(PDO $pdo, $iconId): ?string {
 
   $family = $prefFamily ?: ($familyField ? ($row[$familyField] ?? '') : '');
   $style = $prefStyle ?: ($styleField ? ($row[$styleField] ?? '') : '');
-  $code = $row[$codeField] ?? '';
-  if ($code === '' && $codeFallback) {
-    $code = $row[$codeFallback] ?? '';
+  $code = '';
+  $codeCandidates = [];
+  if ($codeField) {
+    $codeCandidates[] = $row[$codeField] ?? '';
+  }
+  $codeCandidates[] = $row['code'] ?? '';
+  if ($codeFallback) {
+    $codeCandidates[] = $row[$codeFallback] ?? '';
+  }
+  foreach ($codeCandidates as $candidate) {
+    if (trim((string) $candidate) !== '') {
+      $code = $candidate;
+      break;
+    }
+  }
+  // If the code already looks like a FA class list (e.g. "fab fa-atlassian"), honor it directly.
+  if (str_contains((string) $code, ' ') || str_contains((string) $code, ',')) {
+    $cache[$iconId] = cms_icons_class_from_spec((string) $code);
+    return $cache[$iconId];
   }
 
   $brandTokens = ['facebook', 'twitter', 'x-twitter', 'instagram', 'linkedin', 'youtube', 'tiktok', 'whatsapp', 'snapchat', 'pinterest', 'github', 'gitlab', 'discord', 'reddit', 'slack', 'messenger'];
