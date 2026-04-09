@@ -1,11 +1,15 @@
 <?php
 /**
- * Hero intro layout for ITFix.
+ * Hero intro layout (generic IT services intro block).
  */
+
+$siteName = trim((string) cms_pref('prefSiteName', 'WCCMS'));
+$contactSlug = cms_pref('prefContactSlug', 'contact');
+$contactUrl = $baseURL . '/' . ltrim($contactSlug, '/');
 
 $introEyebrow = $contentTitle !== '' ? $contentTitle : 'Managed IT Services';
 $introHeading = $contentHeading !== '' ? $contentHeading : 'Technology that stays out of your way and powers your business.';
-$introLead = $contentSubheading !== '' ? $contentSubheading : 'We keep your systems secure, your people productive, and your budget predictable. From daily support to long-term strategy, ITFix becomes your on-call technology partner.';
+$introLead = $contentSubheading !== '' ? $contentSubheading : ('We keep your systems secure, your people productive, and your budget predictable. From daily support to long-term strategy, ' . $siteName . ' becomes your on-call technology partner.');
 $cardTitle = $contentText !== '' ? strip_tags($contentText) : 'Quick Response. Proactive Care.';
 $cardBody = $contentText2 !== '' ? $contentText2 : 'Our local technicians respond in minutes, not days. We monitor your systems, patch vulnerabilities, and keep your team online.';
 $cardListRaw = $contentText3 !== '' ? strip_tags($contentText3) : "Security-first support\nPerformance monitoring\nDedicated account management";
@@ -21,7 +25,7 @@ $cardItems = array_filter(array_map('trim', preg_split('/\\r?\\n/', $cardListRaw
         <<?php echo cms_h($contentHeadingTag); ?> class="display-5"><?php echo cms_h($introHeading); ?></<?php echo cms_h($contentHeadingTag); ?>>
         <p class="lead"><?php echo cms_h($introLead); ?></p>
         <div class="d-flex flex-wrap gap-3">
-          <a href="<?php echo cms_h($baseURL . '/contact-itfix'); ?>" class="btn btn-primary btn-lg">Talk to an Expert</a>
+          <a href="<?php echo cms_h($contactUrl); ?>" class="btn btn-primary btn-lg">Talk to an Expert</a>
           <a href="<?php echo cms_h($baseURL . '/#services'); ?>" class="btn btn-outline-light btn-lg">Explore Services</a>
         </div>
       </div>

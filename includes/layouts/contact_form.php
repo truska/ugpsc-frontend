@@ -1,5 +1,9 @@
 <?php
-$contactSlug = $contactSlug ?? 'contact-itfix';
+$contactSlug = $contactSlug ?? 'contact';
+$siteName = trim((string) cms_pref('prefSiteName', 'WCCMS'));
+$formNameRaw = trim((string) ($form['name'] ?? ''));
+$fallbackFormName = 'Contact ' . $siteName;
+$formName = ($formNameRaw === '' || stripos($formNameRaw, 'itfix') !== false) ? $fallbackFormName : $formNameRaw;
 ?>
 <main class="contact-page">
   <section class="contact-hero">
@@ -7,7 +11,7 @@ $contactSlug = $contactSlug ?? 'contact-itfix';
       <div class="row align-items-center g-4">
         <div class="col-lg-6">
           <p class="eyebrow">Contact</p>
-          <h1 class="display-5"><?php echo cms_h($form['name'] ?? 'Contact ITFix'); ?></h1>
+          <h1 class="display-5"><?php echo cms_h($formName); ?></h1>
           <p class="lead"><?php echo cms_h($form['description'] ?? 'Tell us about your needs and we will be in touch.'); ?></p>
           <div class="contact-card">
             <h5>Contact Details</h5>
@@ -16,6 +20,7 @@ $contactSlug = $contactSlug ?? 'contact-itfix';
                 $contactTel = cms_tel_data('prefTel1', 'prefTelIntCode', '');
                 $contactEmail = cms_pref('prefEmail', '');
                 $contactAddress = cms_pref('prefAddress1', '');
+                $supportHours = trim((string) cms_pref('prefHours', ''));
               ?>
               <?php if ($contactTel['display'] !== ''): ?>
                 <li>
@@ -30,7 +35,20 @@ $contactSlug = $contactSlug ?? 'contact-itfix';
                 <li><i class="fa-solid fa-location-dot"></i> <?php echo cms_h($contactAddress); ?></li>
               <?php endif; ?>
             </ul>
-            <p class="small text-muted">Support hours: <?php echo cms_h(cms_pref('prefHours', 'Mon-Fri 8am-6pm')); ?></p>
+            <?php if ($supportHours !== ''): ?>
+              <p class="small text-muted">Support hours: <?php echo cms_h($supportHours); ?></p>
+            <?php endif; ?>
+            <div class="mt-4 p-3 bg-light rounded">
+              <?php
+                $joinFeeRaw = trim((string) cms_pref('prefMemFee1', ''));
+                $joinHeading = 'Want to Join';
+                if ($joinFeeRaw !== '' && is_numeric($joinFeeRaw)) {
+                  $joinHeading .= ' - Only £' . number_format((float) $joinFeeRaw, 2);
+                }
+              ?>
+              <h5 class="mb-2"><?php echo cms_h($joinHeading); ?></h5>
+              <a href="<?php echo cms_h($baseURL . '/member-join.php'); ?>" class="btn btn-primary">Join Now</a>
+            </div>
           </div>
         </div>
         <div class="col-lg-6">

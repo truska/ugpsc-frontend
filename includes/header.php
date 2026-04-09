@@ -1,12 +1,12 @@
 <?php
-$siteName = trim((string) cms_pref('prefSiteName', 'UGPSC'));
+$siteName = trim((string) cms_pref('prefSiteName', 'WCCMS'));
 $companyName = trim((string) cms_pref('prefCompanyName', $siteName));
 $logoName = trim((string) cms_pref('prefLogoName', $siteName));
 $logoFile = trim((string) cms_pref('prefLogo', ''));
 if ($logoFile === '') {
   $logoFile = trim((string) cms_pref('prefLogo1', ''));
 }
-if ($logoFile === '' || stripos($logoFile, 'itfix') !== false) {
+if ($logoFile === '') {
   $logoFile = 'ugpsc-logo.png';
 }
 if (preg_match('#^https?://#i', $logoFile) || str_starts_with($logoFile, '/')) {

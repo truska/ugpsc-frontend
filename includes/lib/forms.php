@@ -236,10 +236,15 @@ function cms_lookup_ip_data(string $ip): array {
   $token = cms_pref('prefIPInfoToken', '');
   $query = $token !== '' ? ('?token=' . urlencode($token)) : '';
   $url = 'https://ipinfo.io/' . urlencode($ip) . '/json' . $query;
+  $siteName = trim((string) cms_pref('prefSiteName', 'WCCMS'));
+  $uaSlug = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $siteName));
+  $uaSlug = trim($uaSlug, '-') ?: 'site';
+  $userAgent = $uaSlug . '-contact-form';
+
   $context = stream_context_create([
     'http' => [
       'timeout' => 3,
-      'header' => "User-Agent: itfix-contact-form\r\n",
+      'header' => "User-Agent: {$userAgent}\r\n",
     ],
   ]);
 

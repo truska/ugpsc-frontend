@@ -48,7 +48,7 @@ $pageLayoutFile = null;
 $pageNotFound = false;
 
 if (!cms_table_exists_local('pages')) {
-  $pageTitle = cms_pref('prefSiteName', 'ITFix');
+  $pageTitle = cms_pref('prefSiteName', 'WCCMS');
   return;
 }
 
@@ -75,7 +75,7 @@ if (!$pageData) {
   return;
 }
 
-$pageTitle = $pageData['titletag'] ?? $pageData['name'] ?? $pageData['title'] ?? cms_pref('prefSiteName', 'ITFix');
+$pageTitle = $pageData['titletag'] ?? $pageData['name'] ?? $pageData['title'] ?? cms_pref('prefSiteName', 'WCCMS');
 $pageMetaDescription = $pageData['metadescription'] ?? '';
 $pageMetaKeywords = $pageData['metakeywords'] ?? '';
 

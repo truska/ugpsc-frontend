@@ -44,8 +44,9 @@ function mem_membership_amount(string $currency, ?string $country = null): float
   }
 
   $isOverseas = mem_is_overseas_country($country);
-  $baseGbp = (float) cms_pref('prefMembershipJoinFeeGBP', 25.00);
-  $baseEur = (float) cms_pref('prefMembershipJoinFeeEUR', 30.00);
+  $defaultFee = (float) cms_pref('prefMemFee1', 25.00);
+  $baseGbp = (float) cms_pref('prefMembershipJoinFeeGBP', $defaultFee);
+  $baseEur = (float) cms_pref('prefMembershipJoinFeeEUR', $defaultFee);
   $overseasGbp = (float) cms_pref('prefMembershipOverseasFeeGBP', $baseGbp);
   $overseasEur = (float) cms_pref('prefMembershipOverseasFeeEUR', $baseEur);
 

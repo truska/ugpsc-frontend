@@ -10,7 +10,7 @@ require_once __DIR__ . '/lib/cms_media.php';
 
 // Common template variables.
 $CMS_NAME = 'wITeCanvas CMS';
-$CMS_SITE_NAME = cms_pref('prefSiteName', 'ITFix', 'cms');
+$CMS_SITE_NAME = cms_pref('prefSiteName', 'WCCMS', 'cms');
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $baseURL = cms_base_url();
 $CMS_SITE_URL = $baseURL;

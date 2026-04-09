@@ -1,6 +1,6 @@
 <?php
 $baseURL = cms_base_url();
-$siteName = cms_pref('prefSiteName', 'UGPSC');
+$siteName = cms_pref('prefSiteName', 'WCCMS');
 $companyName = cms_pref('prefCompanyName', $siteName);
 $email = cms_pref('prefEmail', '');
 $telData = cms_tel_data('prefTel1', 'prefTelIntCode', '');

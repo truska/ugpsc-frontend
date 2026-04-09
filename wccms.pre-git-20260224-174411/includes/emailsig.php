@@ -34,13 +34,13 @@ function cms_email_signature(): string {
 
   $logoName = trim((string) cms_pref('prefLogoName', ''));
   if ($logoName === '') {
-    $logoName = trim((string) cms_pref('prefSiteName', ''));
+    $logoName = trim((string) cms_pref('prefSiteName', 'WCCMS'));
   }
   if ($logoName === '') {
-    $logoName = trim((string) cms_pref('prefCompanyName', ''));
+    $logoName = trim((string) cms_pref('prefCompanyName', 'WCCMS'));
   }
   if ($logoName === '') {
-    $logoName = 'MS Timber';
+    $logoName = 'WCCMS';
   }
 
   return '<hr style="border:none;border-top:1px solid #e5e5e5;margin:24px 0;">'

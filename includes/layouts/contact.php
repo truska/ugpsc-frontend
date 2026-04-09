@@ -4,7 +4,7 @@ require_once __DIR__ . '/../lib/forms.php';
 require_once __DIR__ . '/../../wccms/includes/email.php';
 
 $baseURL = cms_base_url();
-$contactSlug = $pageData['slug'] ?? 'contact-itfix';
+$contactSlug = $pageData['slug'] ?? 'contact';
 
 $formSlug = 'contact';
 $form = cms_load_form_by_slug($formSlug);

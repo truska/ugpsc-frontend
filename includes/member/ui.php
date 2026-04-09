@@ -7,7 +7,8 @@ function mem_page_header(string $title = 'UGPSC Members Area', array $options = 
   $member = mem_current_member();
   $isLoggedIn = mem_is_logged_in();
   $base = mem_base_url();
-  $siteName = trim((string) cms_pref('prefSiteName', 'UGPSC'));
+  $siteHome = cms_base_url();
+  $siteName = trim((string) cms_pref('prefSiteName', 'WCCMS'));
   $companyName = trim((string) cms_pref('prefCompanyName', $siteName));
   $logoName = trim((string) cms_pref('prefLogoName', $siteName));
   $logoFile = trim((string) cms_pref('prefLogo', ''));
@@ -133,7 +134,7 @@ function mem_page_header(string $title = 'UGPSC Members Area', array $options = 
   <div class="mem-nav sticky-top">
     <nav class="navbar navbar-expand-lg" aria-label="Member navigation">
       <div class="container">
-        <a class="navbar-brand" href="<?php echo mem_h($base . '/member-dashboard.php'); ?>">
+        <a class="navbar-brand" href="<?php echo mem_h($siteHome . '/'); ?>">
           <img src="<?php echo mem_h($logoUrl); ?>" alt="<?php echo mem_h($logoName); ?> logo">
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#memberMenu" aria-controls="memberMenu" aria-expanded="false" aria-label="Toggle navigation">
@@ -141,6 +142,7 @@ function mem_page_header(string $title = 'UGPSC Members Area', array $options = 
         </button>
         <div class="collapse navbar-collapse" id="memberMenu">
           <ul class="navbar-nav ms-auto gap-lg-2 align-items-lg-center">
+            <li class="nav-item"><a class="nav-link" href="<?php echo mem_h($siteHome . '/'); ?>">Site Home</a></li>
             <li class="nav-item"><a class="nav-link <?php echo $active === 'login' ? 'active' : ''; ?>" href="<?php echo mem_h($base . '/member-login.php'); ?>">Login</a></li>
             <li class="nav-item"><a class="nav-link <?php echo $active === 'join' ? 'active' : ''; ?>" href="<?php echo mem_h($base . '/member-join.php'); ?>">Join</a></li>
             <?php if ($isLoggedIn): ?>
