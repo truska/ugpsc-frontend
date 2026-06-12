@@ -3,6 +3,8 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/stripe.php';
 
 function mem_page_header(string $title = 'UGPSC Members Area', array $options = []): void {
+  global $IS_LOCAL;
+
   $active = $options['active'] ?? '';
   $member = mem_current_member();
   $isLoggedIn = mem_is_logged_in();
@@ -148,6 +150,7 @@ function mem_page_header(string $title = 'UGPSC Members Area', array $options = 
   </style>
 </head>
 <body>
+  <?php include __DIR__ . '/../development-banner.php'; ?>
   <div class="mem-top py-2">
     <div class="container d-flex justify-content-between flex-wrap gap-2">
       <div><?php echo mem_h($siteName); ?> Members Area</div>
@@ -181,16 +184,15 @@ function mem_page_header(string $title = 'UGPSC Members Area', array $options = 
         <div class="collapse navbar-collapse" id="memberMenu">
           <ul class="navbar-nav ms-auto gap-lg-2 align-items-lg-center">
             <li class="nav-item"><a class="nav-link" href="<?php echo mem_h($siteHome . '/'); ?>">Site Home</a></li>
-            <li class="nav-item"><a class="nav-link <?php echo $active === 'join' ? 'active' : ''; ?>" href="<?php echo mem_h($base . '/member-join.php'); ?>">Join</a></li>
             <?php if ($isLoggedIn): ?>
               <li class="nav-item"><a class="nav-link <?php echo $active === 'dashboard' ? 'active' : ''; ?>" href="<?php echo mem_h($base . '/member-dashboard.php'); ?>">Dashboard</a></li>
-              <li class="nav-item"><a class="nav-link <?php echo $active === 'profile' ? 'active' : ''; ?>" href="<?php echo mem_h($base . '/member-profile.php'); ?>">My Details</a></li>
               <?php if (!empty($member['is_admin'])): ?>
                 <li class="nav-item"><a class="nav-link <?php echo $active === 'admin' ? 'active' : ''; ?>" href="<?php echo mem_h($base . '/member-admin-dashboard.php'); ?>">Admin</a></li>
               <?php endif; ?>
               <li class="nav-item"><a class="btn btn-mem-primary" href="<?php echo mem_h($base . '/member-logout.php'); ?>">Logout</a></li>
             <?php else: ?>
               <li class="nav-item"><a class="nav-link <?php echo $active === 'login' ? 'active' : ''; ?>" href="<?php echo mem_h($base . '/member-login.php'); ?>">Login</a></li>
+              <li class="nav-item"><a class="nav-link <?php echo $active === 'join' ? 'active' : ''; ?>" href="<?php echo mem_h($base . '/member-join.php'); ?>">Join</a></li>
               <li class="nav-item"><a class="nav-link" href="<?php echo mem_h($base . '/member-forgot-password.php'); ?>">Forgot Password</a></li>
             <?php endif; ?>
           </ul>

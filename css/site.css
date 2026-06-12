@@ -72,17 +72,6 @@ h1, h2, h3, h4, h5 {
   background: transparent;
 }
 
-.dev-banner {
-  background: #1a9b4f;
-  color: #111;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  padding: 6px 12px;
-  text-align: center;
-  border-bottom: 2px solid #0f7a3c;
-}
-
 .header-topline {
   background-color: #f4eee3 !important;
   border-bottom: 1px solid rgba(31, 46, 79, 0.08);
@@ -96,6 +85,12 @@ h1, h2, h3, h4, h5 {
   font-size: 0.84rem;
   text-align: right;
   color: #7b8392;
+}
+
+.header-member-identity {
+  color: #9a7f86;
+  text-transform: none;
+  letter-spacing: 0.04em;
 }
 
 .site-nav-wrap {

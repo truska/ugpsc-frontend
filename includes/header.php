@@ -16,17 +16,31 @@ if (preg_match('#^https?://#i', $logoFile) || str_starts_with($logoFile, '/')) {
 }
 $toplineLeft = $companyName !== '' ? $companyName : $siteName;
 $toplineRight = $siteName !== '' ? $siteName : $toplineLeft;
+$memberSession = isset($_SESSION['mem_member']) && is_array($_SESSION['mem_member'])
+  ? $_SESSION['mem_member']
+  : null;
+$memberIsLoggedIn = !empty($memberSession['id']);
+$memberIdentity = '';
+if ($memberIsLoggedIn) {
+  $memberName = trim((string) ($memberSession['firstname'] ?? '') . ' ' . (string) ($memberSession['surname'] ?? ''));
+  $membershipNumber = (int) ($memberSession['membership_number'] ?? 0);
+  $memberIdentity = $memberName;
+  if ($membershipNumber > 0) {
+    $memberIdentity .= ($memberIdentity !== '' ? ' ' : '') . '[' . $membershipNumber . ']';
+  }
+}
 ?>
-<?php if (!empty($IS_LOCAL)): ?>
-  <div class="dev-banner">
-    Development Site
-  </div>
-<?php endif; ?>
+<?php include __DIR__ . '/development-banner.php'; ?>
 <header class="site-header">
   <div class="header-topline py-2">
     <div class="container d-flex flex-wrap justify-content-between align-items-center gap-2">
       <div><?php echo cms_h($toplineLeft); ?></div>
-      <div class="header-topline-meta"><?php echo cms_h($toplineRight); ?></div>
+      <div class="header-topline-meta d-flex flex-wrap justify-content-end align-items-center gap-2 gap-sm-3">
+        <?php if ($memberIdentity !== ''): ?>
+          <span class="header-member-identity"><?php echo cms_h($memberIdentity); ?></span>
+        <?php endif; ?>
+        <span><?php echo cms_h($toplineRight); ?></span>
+      </div>
     </div>
   </div>
   <div class="site-nav-wrap sticky-top">
@@ -41,8 +55,12 @@ $toplineRight = $siteName !== '' ? $siteName : $toplineLeft;
         <div class="collapse navbar-collapse" id="siteMenu">
           <div class="header-nav-right ms-lg-auto">
             <div class="header-actions d-flex flex-wrap gap-2">
-              <a href="<?php echo cms_h($baseURL . '/member-login.php'); ?>" class="btn btn-member-login">Member Login</a>
-              <a href="<?php echo cms_h($baseURL . '/member-join.php'); ?>" class="btn btn-member-join">Join</a>
+              <?php if ($memberIsLoggedIn): ?>
+                <a href="<?php echo cms_h($baseURL . '/member-dashboard.php'); ?>" class="btn btn-member-login">Return to My Dashboard</a>
+              <?php else: ?>
+                <a href="<?php echo cms_h($baseURL . '/member-login.php'); ?>" class="btn btn-member-login">Member Login</a>
+                <a href="<?php echo cms_h($baseURL . '/member-join.php'); ?>" class="btn btn-member-join">Join</a>
+              <?php endif; ?>
             </div>
             <?php include __DIR__ . '/menu.php'; ?>
           </div>
