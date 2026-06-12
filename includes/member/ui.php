@@ -57,6 +57,11 @@ function mem_page_header(string $title = 'UGPSC Members Area', array $options = 
       text-transform: uppercase;
       letter-spacing: 0.08em;
     }
+    .mem-top-user {
+      color: rgba(255, 255, 255, 0.72);
+      text-transform: none;
+      letter-spacing: 0.04em;
+    }
     .mem-nav {
       background: #fff;
       border-bottom: 1px solid var(--mem-line);
@@ -146,7 +151,22 @@ function mem_page_header(string $title = 'UGPSC Members Area', array $options = 
   <div class="mem-top py-2">
     <div class="container d-flex justify-content-between flex-wrap gap-2">
       <div><?php echo mem_h($siteName); ?> Members Area</div>
-      <div>Secure Access</div>
+      <div class="d-flex flex-wrap align-items-center gap-2 gap-sm-3">
+        <?php if ($isLoggedIn && $member): ?>
+          <?php
+            $memberName = trim((string) ($member['firstname'] ?? '') . ' ' . (string) ($member['surname'] ?? ''));
+            $membershipNumber = trim((string) ($member['membership_number'] ?? ''));
+            $memberIdentity = $memberName;
+            if ($membershipNumber !== '') {
+              $memberIdentity .= ($memberIdentity !== '' ? ' ' : '') . '[' . $membershipNumber . ']';
+            }
+          ?>
+          <?php if ($memberIdentity !== ''): ?>
+            <span class="mem-top-user"><?php echo mem_h($memberIdentity); ?></span>
+          <?php endif; ?>
+        <?php endif; ?>
+        <span>Secure Access</span>
+      </div>
     </div>
   </div>
   <div class="mem-nav sticky-top">
@@ -161,7 +181,6 @@ function mem_page_header(string $title = 'UGPSC Members Area', array $options = 
         <div class="collapse navbar-collapse" id="memberMenu">
           <ul class="navbar-nav ms-auto gap-lg-2 align-items-lg-center">
             <li class="nav-item"><a class="nav-link" href="<?php echo mem_h($siteHome . '/'); ?>">Site Home</a></li>
-            <li class="nav-item"><a class="nav-link <?php echo $active === 'login' ? 'active' : ''; ?>" href="<?php echo mem_h($base . '/member-login.php'); ?>">Login</a></li>
             <li class="nav-item"><a class="nav-link <?php echo $active === 'join' ? 'active' : ''; ?>" href="<?php echo mem_h($base . '/member-join.php'); ?>">Join</a></li>
             <?php if ($isLoggedIn): ?>
               <li class="nav-item"><a class="nav-link <?php echo $active === 'dashboard' ? 'active' : ''; ?>" href="<?php echo mem_h($base . '/member-dashboard.php'); ?>">Dashboard</a></li>
@@ -171,6 +190,7 @@ function mem_page_header(string $title = 'UGPSC Members Area', array $options = 
               <?php endif; ?>
               <li class="nav-item"><a class="btn btn-mem-primary" href="<?php echo mem_h($base . '/member-logout.php'); ?>">Logout</a></li>
             <?php else: ?>
+              <li class="nav-item"><a class="nav-link <?php echo $active === 'login' ? 'active' : ''; ?>" href="<?php echo mem_h($base . '/member-login.php'); ?>">Login</a></li>
               <li class="nav-item"><a class="nav-link" href="<?php echo mem_h($base . '/member-forgot-password.php'); ?>">Forgot Password</a></li>
             <?php endif; ?>
           </ul>
