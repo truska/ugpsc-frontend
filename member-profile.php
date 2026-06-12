@@ -57,6 +57,7 @@ mem_page_header('UGPSC Members | My Details', ['active' => 'profile']);
     <?php endif; ?>
 
     <form method="post" novalidate>
+      <input type="hidden" name="action" value="update_profile">
       <input type="hidden" name="csrf_token" value="<?php echo mem_h(mem_csrf_token()); ?>">
       <div class="row g-3">
         <div class="col-md-3">

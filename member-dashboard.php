@@ -140,6 +140,7 @@ mem_page_header('UGPSC Members | Dashboard', ['active' => 'dashboard']);
             <button type="submit" class="btn btn-sm btn-outline-secondary">Email Renew Link (Test)</button>
           </form>
         <?php endif; ?>
+        <a href="<?php echo mem_h(mem_base_url('/member-change-password.php')); ?>" class="btn btn-sm btn-outline-secondary mt-2">Change Password</a>
       </div>
     </div>
   </div>

@@ -113,6 +113,23 @@ function mem_page_header(string $title = 'UGPSC Members Area', array $options = 
       color: #51656d;
       margin-bottom: 0.25rem;
     }
+    .mem-password-reveal {
+      color: #51656d;
+      border-color: #dee2e6;
+      background: #fff;
+    }
+    .mem-password-reveal:hover,
+    .mem-password-reveal:focus,
+    .mem-password-reveal.is-revealing {
+      color: var(--mem-green);
+      border-color: #86b7a2;
+      background: #f4f8f6;
+    }
+    .mem-password-reveal svg {
+      display: block;
+      width: 1.2rem;
+      height: 1.2rem;
+    }
     .mem-footer {
       border-top: 1px solid var(--mem-line);
       color: #60717a;
@@ -175,6 +192,7 @@ function mem_page_footer(): void {
     </div>
   </footer>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+  <script src="/js/member-password-reveal.js?v=20260612-5"></script>
 </body>
 </html>
 <?php

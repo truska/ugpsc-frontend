@@ -451,6 +451,45 @@ function mem_reset_password(string $token, string $newPassword, string &$error =
   return true;
 }
 
+function mem_change_password(int $memberId, string $newPassword, string &$error = null): bool {
+  global $pdo, $DB_OK;
+
+  if (!mem_ready() || !$DB_OK || !($pdo instanceof PDO) || $memberId <= 0) {
+    $error = 'Unable to update your password right now.';
+    return false;
+  }
+
+  if (strlen($newPassword) < mem_password_min_length()) {
+    $error = 'Use at least ' . mem_password_min_length() . ' characters for your password.';
+    return false;
+  }
+
+  $sql = 'UPDATE mem_member
+          SET password_hash = :password_hash, modified = NOW()
+          WHERE id = :id AND archived = 0
+          LIMIT 1';
+
+  try {
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([
+      ':password_hash' => password_hash($newPassword, PASSWORD_DEFAULT),
+      ':id' => $memberId,
+    ]);
+  } catch (PDOException $e) {
+    $error = 'Unable to update your password right now.';
+    return false;
+  }
+
+  if ($stmt->rowCount() !== 1) {
+    $error = 'Your member account could not be found.';
+    return false;
+  }
+
+  mem_log_event('password_changed', 'Member changed their password', $sql, $memberId);
+  mem_log_change('password_changed', 'Member changed their password', $sql, $memberId, $memberId);
+  return true;
+}
+
 function mem_load_member(int $memberId): ?array {
   global $pdo, $DB_OK;
 

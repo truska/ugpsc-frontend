@@ -59,7 +59,15 @@ mem_page_header('UGPSC Members | Login', ['active' => 'login']);
       </div>
       <div class="mb-3">
         <label class="mem-label" for="password">Password</label>
-        <input type="password" class="form-control" id="password" name="password" autocomplete="current-password" required>
+        <div class="input-group">
+          <input type="password" class="form-control" id="password" name="password" autocomplete="current-password" required>
+          <button class="btn mem-password-reveal" type="button" data-password-reveal aria-controls="password" aria-label="Hold to show password" aria-pressed="false" title="Hover or hold to show password" onmouseenter="this.previousElementSibling.type='text'" onmouseleave="this.previousElementSibling.type='password'" ontouchstart="this.previousElementSibling.type='text'" ontouchend="this.previousElementSibling.type='password'" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();this.previousElementSibling.type='text'}" onkeyup="this.previousElementSibling.type='password'" onblur="this.previousElementSibling.type='password'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+        </div>
       </div>
       <div class="d-grid gap-2 d-sm-flex">
         <button type="submit" class="btn btn-mem-primary">Log In</button>

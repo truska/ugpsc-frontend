@@ -47,11 +47,27 @@ mem_page_header('UGPSC Members | Reset Password', ['active' => 'login']);
         <input type="hidden" name="token" value="<?php echo mem_h($token); ?>">
         <div class="mb-3">
           <label class="mem-label" for="password">New Password</label>
-          <input type="password" class="form-control" id="password" name="password" minlength="6" required>
+          <div class="input-group">
+            <input type="password" class="form-control" id="password" name="password" minlength="6" autocomplete="new-password" required>
+            <button class="btn mem-password-reveal" type="button" data-password-reveal aria-controls="password" aria-label="Hold to show new password" aria-pressed="false" title="Hover or hold to show password" onmouseenter="this.previousElementSibling.type='text'" onmouseleave="this.previousElementSibling.type='password'" ontouchstart="this.previousElementSibling.type='text'" ontouchend="this.previousElementSibling.type='password'" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();this.previousElementSibling.type='text'}" onkeyup="this.previousElementSibling.type='password'" onblur="this.previousElementSibling.type='password'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
         </div>
         <div class="mb-3">
           <label class="mem-label" for="confirm_password">Confirm Password</label>
-          <input type="password" class="form-control" id="confirm_password" name="confirm_password" minlength="6" required>
+          <div class="input-group">
+            <input type="password" class="form-control" id="confirm_password" name="confirm_password" minlength="6" autocomplete="new-password" required>
+            <button class="btn mem-password-reveal" type="button" data-password-reveal aria-controls="confirm_password" aria-label="Hold to show confirmed password" aria-pressed="false" title="Hover or hold to show password" onmouseenter="this.previousElementSibling.type='text'" onmouseleave="this.previousElementSibling.type='password'" ontouchstart="this.previousElementSibling.type='text'" ontouchend="this.previousElementSibling.type='password'" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();this.previousElementSibling.type='text'}" onkeyup="this.previousElementSibling.type='password'" onblur="this.previousElementSibling.type='password'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
         </div>
         <div class="d-flex gap-2 flex-wrap">
           <button class="btn btn-mem-primary" type="submit">Update password</button>
