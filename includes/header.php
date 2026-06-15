@@ -57,6 +57,7 @@ if ($memberIsLoggedIn) {
             <div class="header-actions d-flex flex-wrap gap-2">
               <?php if ($memberIsLoggedIn): ?>
                 <a href="<?php echo cms_h($baseURL . '/member-dashboard.php'); ?>" class="btn btn-member-login">Return to My Dashboard</a>
+                <a href="<?php echo cms_h($baseURL . '/member-logout.php'); ?>" class="btn btn-member-join">Logout</a>
               <?php else: ?>
                 <a href="<?php echo cms_h($baseURL . '/member-login.php'); ?>" class="btn btn-member-login">Member Login</a>
                 <a href="<?php echo cms_h($baseURL . '/member-join.php'); ?>" class="btn btn-member-join">Join</a>

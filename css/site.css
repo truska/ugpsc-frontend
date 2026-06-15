@@ -10,6 +10,7 @@
   --mist: #eef2fb;
   --slate: #4b5b78;
   --white: #ffffff;
+  --header-bg: #fbfaf7;
 }
 
 body {
@@ -69,11 +70,11 @@ h1, h2, h3, h4, h5 {
 }
 
 .site-header {
-  background: transparent;
+  background: var(--header-bg);
 }
 
 .header-topline {
-  background-color: #f4eee3 !important;
+  background-color: var(--header-bg) !important;
   border-bottom: 1px solid rgba(31, 46, 79, 0.08);
   color: #6a7281;
   font-size: 0.88rem;
@@ -94,28 +95,24 @@ h1, h2, h3, h4, h5 {
 }
 
 .site-nav-wrap {
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--header-bg);
   border-bottom: 1px solid rgba(31, 46, 79, 0.08);
-  backdrop-filter: blur(8px);
 }
 
 .site-nav-wrap .navbar {
-  padding-top: 0.35rem;
-  padding-bottom: 0.35rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
 }
 
 .site-nav-wrap .navbar-brand {
-  position: relative;
-  z-index: 2;
   display: inline-flex;
   align-items: center;
-  margin-top: -1rem;
+  margin-top: 0;
 }
 
 .site-logo {
   max-height: 120px;
   width: auto;
-  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.12));
 }
 
 .site-nav-wrap .navbar-collapse {
@@ -358,10 +355,6 @@ h1, h2, h3, h4, h5 {
 }
 
 @media (max-width: 991.98px) {
-  .site-nav-wrap .navbar-brand {
-    margin-top: -0.35rem;
-  }
-
   .site-logo {
     max-height: 84px;
   }
