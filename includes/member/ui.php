@@ -113,6 +113,36 @@ function mem_page_header(string $title = 'UGPSC Members Area', array $options = 
       background: #aa2f22;
       color: #fff;
     }
+    .btn-card-action {
+      background: var(--mem-red);
+      border-color: var(--mem-red);
+      color: #fff;
+      font-weight: 600;
+    }
+    .btn-card-action:hover,
+    .btn-card-action:focus {
+      background: var(--mem-green);
+      border-color: var(--mem-green);
+      color: #fff;
+    }
+    .btn-card-action:focus-visible {
+      box-shadow: 0 0 0 0.25rem rgba(31, 90, 63, 0.25);
+      outline: 0;
+    }
+    .btn-card-action:active,
+    .btn-card-action.active {
+      background: #17472f;
+      border-color: #17472f;
+      color: #fff;
+    }
+    .btn-card-action.disabled,
+    .btn-card-action:disabled {
+      background: #8a9296;
+      border-color: #8a9296;
+      color: #fff;
+      opacity: 0.7;
+      pointer-events: none;
+    }
     .mem-label {
       font-size: 0.8rem;
       text-transform: uppercase;

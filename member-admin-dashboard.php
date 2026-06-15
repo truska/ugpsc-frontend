@@ -22,6 +22,7 @@ if (empty($member['is_admin'])) {
 mem_page_header('UGPSC Admin | Dashboard', ['active' => 'admin']);
 
 $adminBase = mem_base_url('/member-admin.php');
+$adminProcess = mem_base_url('/member-admin-process.php');
 $adminTransactions = mem_base_url('/member-admin-transactions.php');
 $financialsUrl = '#';
 $mailingsUrl = '#';
@@ -98,7 +99,10 @@ $statCards = [
           <div class="mem-label mb-2">Membership</div>
           <div class="fw-semibold mb-2">Find and manage members</div>
           <p class="text-secondary small mb-3">Search, select, and act on member records.</p>
-          <a class="btn btn-sm btn-mem-primary" href="<?php echo mem_h($adminBase); ?>">Go to Find Member</a>
+          <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-sm btn-card-action" href="<?php echo mem_h($adminBase); ?>">Find</a>
+            <a class="btn btn-sm btn-card-action" href="<?php echo mem_h($adminProcess); ?>">Process</a>
+          </div>
         </div>
       </div>
       <div class="col-md-6 col-xl-3">
@@ -106,7 +110,7 @@ $statCards = [
           <div class="mem-label mb-2">Financial</div>
           <div class="fw-semibold mb-2">Payments &amp; ledger</div>
           <p class="text-secondary small mb-3">View card payments, references, and status.</p>
-          <a class="btn btn-sm btn-outline-secondary" href="<?php echo mem_h($adminTransactions); ?>">Financial</a>
+          <a class="btn btn-sm btn-card-action" href="<?php echo mem_h($adminTransactions); ?>">Financial</a>
         </div>
       </div>
       <div class="col-md-6 col-xl-3">
@@ -114,7 +118,7 @@ $statCards = [
           <div class="mem-label mb-2">Mailings</div>
           <div class="fw-semibold mb-2">Lists &amp; campaigns</div>
           <p class="text-secondary small mb-3">Renewal emails, printable letters, and export lists.</p>
-          <a class="btn btn-sm btn-outline-secondary" href="<?php echo mem_h(mem_base_url('/member-admin-mailings.php')); ?>">Open mailings</a>
+          <a class="btn btn-sm btn-card-action" href="<?php echo mem_h(mem_base_url('/member-admin-mailings.php')); ?>">Open mailings</a>
         </div>
       </div>
       <div class="col-md-6 col-xl-3">
@@ -122,7 +126,7 @@ $statCards = [
           <div class="mem-label mb-2">Reports</div>
           <div class="fw-semibold mb-2">Snapshots &amp; exports</div>
           <p class="text-secondary small mb-3">Slot in KPI tiles and CSV exports.</p>
-          <a class="btn btn-sm btn-outline-secondary disabled" href="<?php echo mem_h($reportsUrl); ?>" aria-disabled="true">Coming soon</a>
+          <a class="btn btn-sm btn-card-action disabled" href="<?php echo mem_h($reportsUrl); ?>" aria-disabled="true" tabindex="-1">Coming soon</a>
         </div>
       </div>
     </div>
