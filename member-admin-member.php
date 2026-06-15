@@ -385,10 +385,10 @@ mem_page_header('UGPSC Admin | Member', ['active' => 'admin']);
           <a class="nav-link <?php echo $activeTab === 'overview' ? 'active' : ''; ?>" id="overview-tab" data-admin-tab="overview" data-bs-toggle="tab" href="#overview" role="tab" aria-controls="overview" aria-selected="<?php echo $activeTab === 'overview' ? 'true' : 'false'; ?>">Overview</a>
         </li>
         <li class="nav-item" role="presentation">
-          <a class="nav-link <?php echo $activeTab === 'history' ? 'active' : ''; ?>" id="history-tab" data-admin-tab="history" data-bs-toggle="tab" href="#history" role="tab" aria-controls="history" aria-selected="<?php echo $activeTab === 'history' ? 'true' : 'false'; ?>">Membership History</a>
+          <a class="nav-link <?php echo $activeTab === 'actions' ? 'active' : ''; ?>" id="actions-tab" data-admin-tab="actions" data-bs-toggle="tab" href="#actions" role="tab" aria-controls="actions" aria-selected="<?php echo $activeTab === 'actions' ? 'true' : 'false'; ?>">Update Member</a>
         </li>
         <li class="nav-item" role="presentation">
-          <a class="nav-link <?php echo $activeTab === 'actions' ? 'active' : ''; ?>" id="actions-tab" data-admin-tab="actions" data-bs-toggle="tab" href="#actions" role="tab" aria-controls="actions" aria-selected="<?php echo $activeTab === 'actions' ? 'true' : 'false'; ?>">Actions</a>
+          <a class="nav-link <?php echo $activeTab === 'history' ? 'active' : ''; ?>" id="history-tab" data-admin-tab="history" data-bs-toggle="tab" href="#history" role="tab" aria-controls="history" aria-selected="<?php echo $activeTab === 'history' ? 'true' : 'false'; ?>">Membership History</a>
         </li>
         <li class="nav-item" role="presentation">
           <a class="nav-link <?php echo $activeTab === 'email' ? 'active' : ''; ?>" id="email-tab" data-admin-tab="email" data-bs-toggle="tab" href="#email" role="tab" aria-controls="email" aria-selected="<?php echo $activeTab === 'email' ? 'true' : 'false'; ?>">Email Marketing</a>
