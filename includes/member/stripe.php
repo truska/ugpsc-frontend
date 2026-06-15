@@ -194,6 +194,7 @@ function mem_finalize_membership_payment(
     $existing = $selectStmt->fetch(PDO::FETCH_ASSOC);
 
     if ($existing && ($existing['status'] ?? '') === 'paid') {
+      mem_queue_fulfilment($memberId, (int) $existing['id'], $transactionType);
       $pdo->commit();
       return [
         'transaction_id' => (int) $existing['id'],
@@ -279,6 +280,8 @@ function mem_finalize_membership_payment(
         ]);
       }
     }
+
+    mem_queue_fulfilment($memberId, $transactionId, $transactionType);
 
     $pdo->commit();
     mem_log_event($successEvent, 'Stripe payment completed', null, $memberId);
