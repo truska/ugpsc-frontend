@@ -235,6 +235,8 @@ function mem_page_header(string $title = 'UGPSC Members Area', array $options = 
 }
 
 function mem_page_footer(): void {
+  $siteName = trim((string) cms_pref('prefSiteName', 'WCCMS'));
+  $companyName = trim((string) cms_pref('prefCompanyName', $siteName));
   ?>
   </main>
   <footer class="mem-footer py-4 mt-4">

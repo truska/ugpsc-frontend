@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/fulfilment.php';
 
 function mem_password_min_length(): int {
   return 6;
@@ -634,6 +635,8 @@ function mem_complete_emulated_membership_payment(int $memberId, string $transac
         ]);
       }
     }
+
+    mem_queue_fulfilment($memberId, $transactionId, $transactionType);
 
     $pdo->commit();
     mem_log_event($successEvent, 'Emulated payment completed', $sqlTx . '; ' . $sqlMember, $memberId);

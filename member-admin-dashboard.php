@@ -34,26 +34,48 @@ $yearCounts = [
   $currentYear => 0,
   $lastYear => 0,
 ];
+$pendingProcessCounts = [
+  'join' => 0,
+  'renewal' => 0,
+];
 
-if (mem_ready() && mem_table_exists('mem_membership_year')) {
+if (mem_ready()) {
   global $pdo, $DB_OK;
   if ($DB_OK && $pdo instanceof PDO) {
-    $stmt = $pdo->prepare(
-      'SELECT membership_year, COUNT(*) AS total
-       FROM mem_membership_year
-       WHERE archived = 0
-         AND membership_year IN (:this_year, :last_year)
-       GROUP BY membership_year'
-    );
-    $stmt->execute([
-      ':this_year' => $currentYear,
-      ':last_year' => $lastYear,
-    ]);
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-      $year = (int) ($row['membership_year'] ?? 0);
-      $count = (int) ($row['total'] ?? 0);
-      if (array_key_exists($year, $yearCounts)) {
-        $yearCounts[$year] = $count;
+    if (mem_table_exists('mem_membership_year')) {
+      $stmt = $pdo->prepare(
+        'SELECT membership_year, COUNT(*) AS total
+         FROM mem_membership_year
+         WHERE archived = 0
+           AND membership_year IN (:this_year, :last_year)
+         GROUP BY membership_year'
+      );
+      $stmt->execute([
+        ':this_year' => $currentYear,
+        ':last_year' => $lastYear,
+      ]);
+      while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $year = (int) ($row['membership_year'] ?? 0);
+        $count = (int) ($row['total'] ?? 0);
+        if (array_key_exists($year, $yearCounts)) {
+          $yearCounts[$year] = $count;
+        }
+      }
+    }
+
+    if (mem_table_exists('mem_fulfilment')) {
+      $processStmt = $pdo->query(
+        'SELECT fulfilment_type, COUNT(*) AS total
+         FROM mem_fulfilment
+         WHERE archived = 0
+           AND status = "pending"
+         GROUP BY fulfilment_type'
+      );
+      while ($row = $processStmt->fetch(PDO::FETCH_ASSOC)) {
+        $type = (string) ($row['fulfilment_type'] ?? '');
+        if (array_key_exists($type, $pendingProcessCounts)) {
+          $pendingProcessCounts[$type] = (int) ($row['total'] ?? 0);
+        }
       }
     }
   }
@@ -63,6 +85,16 @@ $statCards = [
   [
     'label' => 'Members this year (' . $currentYear . ')',
     'value' => $yearCounts[$currentYear],
+    'bg' => '#1f5a3f',
+  ],
+  [
+    'label' => "New Members\nto process",
+    'value' => $pendingProcessCounts['join'],
+    'bg' => '#bf3b2b',
+  ],
+  [
+    'label' => "Renewals\nto process",
+    'value' => $pendingProcessCounts['renewal'],
     'bg' => '#1f5a3f',
   ],
   [
@@ -87,7 +119,7 @@ $statCards = [
         <div class="col-12 col-sm-6 col-lg-4 col-xxl-2">
           <div class="p-3 rounded h-100 text-white text-center d-flex flex-column justify-content-center align-items-center" style="background: <?php echo mem_h($card['bg']); ?>;">
             <div class="fs-2 fw-bold mb-1"><?php echo (int) $card['value']; ?></div>
-            <div class="small fw-semibold"><?php echo mem_h($card['label']); ?></div>
+            <div class="small fw-semibold"><?php echo nl2br(mem_h($card['label'])); ?></div>
           </div>
         </div>
       <?php endforeach; ?>
