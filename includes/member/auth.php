@@ -670,7 +670,7 @@ function mem_complete_emulated_renewal_payment(int $memberId, array $paymentInpu
   return mem_complete_emulated_membership_payment($memberId, 'renewal', $paymentInput, $error);
 }
 
-function mem_create_magic_link(int $memberId, string $linkType = 'renewal', int $ttlHours = 72): ?string {
+function mem_create_magic_link(int $memberId, string $linkType = 'renewal', int $ttlHours = 72, ?string &$accessCode = null): ?string {
   global $pdo, $DB_OK;
 
   if (!mem_ready() || !mem_table_exists('mem_magic_link') || !$DB_OK || !($pdo instanceof PDO) || $memberId <= 0) {
@@ -680,21 +680,76 @@ function mem_create_magic_link(int $memberId, string $linkType = 'renewal', int 
   $linkType = ($linkType === 'quick_login') ? 'quick_login' : 'renewal';
   $token = bin2hex(random_bytes(32));
   $tokenHash = hash('sha256', $token);
+  $accessCode = null;
+  $accessCodeHash = null;
+  if ($linkType === 'renewal') {
+    $alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    do {
+      $candidate = '';
+      for ($i = 0; $i < 8; $i++) {
+        $candidate .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+      }
+      $candidateHash = hash('sha256', $candidate);
+      $codeStmt = $pdo->prepare('SELECT COUNT(*) FROM mem_magic_link WHERE access_code_hash = :hash');
+      $codeStmt->execute([':hash' => $candidateHash]);
+    } while ((int) $codeStmt->fetchColumn() > 0);
+    $accessCode = $candidate;
+    $accessCodeHash = $candidateHash;
+  }
   $expiresAt = (new DateTime('+' . max(1, $ttlHours) . ' hours'))->format('Y-m-d H:i:s');
 
-  $sql = 'INSERT INTO mem_magic_link (member_id, link_type, token_hash, expires_at, request_ip, showonweb, archived)
-          VALUES (:member_id, :link_type, :token_hash, :expires_at, :request_ip, "Yes", 0)';
+  $sql = 'INSERT INTO mem_magic_link (member_id, link_type, token_hash, access_code_hash, expires_at, request_ip, showonweb, archived)
+          VALUES (:member_id, :link_type, :token_hash, :access_code_hash, :expires_at, :request_ip, "Yes", 0)';
   $stmt = $pdo->prepare($sql);
   $stmt->execute([
     ':member_id' => $memberId,
     ':link_type' => $linkType,
     ':token_hash' => $tokenHash,
+    ':access_code_hash' => $accessCodeHash,
     ':expires_at' => $expiresAt,
     ':request_ip' => $_SERVER['REMOTE_ADDR'] ?? null,
   ]);
   mem_log_event('magic_link_created', 'Magic link created: ' . $linkType, $sql, $memberId);
 
   return $token;
+}
+
+function mem_normalize_magic_code(string $code): string {
+  return strtoupper(preg_replace('/[^A-Z0-9]/i', '', trim($code)) ?? '');
+}
+
+function mem_validate_magic_code(string $code, string $linkType = 'renewal'): ?array {
+  global $pdo, $DB_OK;
+
+  $code = mem_normalize_magic_code($code);
+  if (
+    !mem_ready()
+    || !mem_table_exists('mem_magic_link')
+    || !$DB_OK
+    || !($pdo instanceof PDO)
+    || strlen($code) !== 8
+  ) {
+    return null;
+  }
+
+  $linkType = ($linkType === 'quick_login') ? 'quick_login' : 'renewal';
+  $stmt = $pdo->prepare(
+    'SELECT id, member_id, expires_at, used_at
+     FROM mem_magic_link
+     WHERE access_code_hash = :access_code_hash
+       AND link_type = :link_type
+       AND archived = 0
+       AND showonweb = "Yes"
+       AND expires_at > NOW()
+       AND used_at IS NULL
+     LIMIT 1'
+  );
+  $stmt->execute([
+    ':access_code_hash' => hash('sha256', $code),
+    ':link_type' => $linkType,
+  ]);
+  $row = $stmt->fetch(PDO::FETCH_ASSOC);
+  return $row ?: null;
 }
 
 function mem_validate_magic_link(string $token, string $linkType = 'renewal'): ?array {

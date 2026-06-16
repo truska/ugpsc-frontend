@@ -23,6 +23,7 @@ mem_page_header('UGPSC Admin | Dashboard', ['active' => 'admin']);
 
 $adminBase = mem_base_url('/member-admin.php');
 $adminProcess = mem_base_url('/member-admin-process.php');
+$adminAccountClaims = mem_base_url('/member-admin-account-claims.php');
 $adminTransactions = mem_base_url('/member-admin-transactions.php');
 $financialsUrl = '#';
 $mailingsUrl = '#';
@@ -134,6 +135,7 @@ $statCards = [
           <div class="d-flex flex-wrap gap-2">
             <a class="btn btn-sm btn-card-action" href="<?php echo mem_h($adminBase); ?>">Find</a>
             <a class="btn btn-sm btn-card-action" href="<?php echo mem_h($adminProcess); ?>">Process</a>
+            <a class="btn btn-sm btn-card-action" href="<?php echo mem_h($adminAccountClaims); ?>">Claims</a>
           </div>
         </div>
       </div>

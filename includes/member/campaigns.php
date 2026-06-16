@@ -30,6 +30,55 @@ function mem_campaign_test_email_allowed(string $email): bool {
   return in_array(strtolower(trim($email)), mem_campaign_test_emails(), true);
 }
 
+function mem_campaign_preference(string $name, string $default = ''): string {
+  global $pdo, $DB_OK;
+
+  $value = trim((string) cms_pref($name, ''));
+  if ($value !== '' || !$DB_OK || !($pdo instanceof PDO)) {
+    return $value !== '' ? $value : $default;
+  }
+
+  $table = cms_preferences_table();
+  if (!$table) {
+    return $default;
+  }
+
+  $stmt = $pdo->prepare("SELECT value FROM {$table} WHERE name = :name AND archived = 0 LIMIT 1");
+  $stmt->execute([':name' => $name]);
+  $value = trim((string) $stmt->fetchColumn());
+  return $value !== '' ? $value : $default;
+}
+
+function mem_campaign_letter_stationery(): array {
+  $siteName = mem_campaign_preference('prefSiteName', 'UGPSC');
+  $company = mem_campaign_preference('prefCompanyName', $siteName);
+  $logoFile = mem_campaign_preference('prefLogoEmail');
+  if ($logoFile === '') {
+    $logoFile = mem_campaign_preference('prefLogo', 'ugpsc-logo.png');
+  }
+  if ($logoFile !== '' && !preg_match('#^https?://#i', $logoFile) && !str_starts_with($logoFile, '/')) {
+    $logoUrl = mem_base_url('/filestore/images/logos/' . ltrim($logoFile, '/'));
+  } else {
+    $logoUrl = $logoFile;
+  }
+
+  return [
+    'company' => $company,
+    'logo_url' => $logoUrl,
+    'address' => array_values(array_filter([
+      mem_campaign_preference('prefAddress1'),
+      mem_campaign_preference('prefAddress2'),
+      mem_campaign_preference('prefTown'),
+      mem_campaign_preference('prefCounty'),
+      mem_campaign_preference('prefPostcode'),
+      mem_campaign_preference('prefCountry'),
+    ], static fn(string $line): bool => $line !== '')),
+    'telephone' => mem_campaign_preference('prefTel1'),
+    'email' => mem_campaign_preference('prefEmail'),
+    'website' => mem_base_url(),
+  ];
+}
+
 function mem_campaign_clean_html(string $html): string {
   $allowed = '<p><br><strong><b><em><i><u><h1><h2><h3><ul><ol><li><a><blockquote>';
   $clean = strip_tags(trim($html), $allowed);
@@ -39,9 +88,20 @@ function mem_campaign_clean_html(string $html): string {
   return $clean;
 }
 
-function mem_campaign_render(string $template, array $recipient, array $campaign): string {
+function mem_campaign_absolute_url(string $url): string {
+  $url = trim($url);
+  if ($url !== '' && str_starts_with($url, '/')) {
+    return mem_base_url($url);
+  }
+  return $url;
+}
+
+function mem_campaign_render(string $template, array $recipient, array $campaign, string $channel = 'email'): string {
   $siteUrl = cms_base_url();
   $siteName = trim((string) cms_pref('prefSiteName', 'UGPSC'));
+  $quickRenewLink = $channel === 'letter'
+    ? mem_base_url('/member-renew-code.php')
+    : mem_campaign_absolute_url((string) ($recipient['quick_renew_url'] ?? ''));
   $address = implode(', ', array_values(array_filter([
     trim((string) ($recipient['address1'] ?? '')),
     trim((string) ($recipient['address2'] ?? '')),
@@ -58,7 +118,8 @@ function mem_campaign_render(string $template, array $recipient, array $campaign
     '{{year}}' => (string) ($campaign['membership_year'] ?? date('Y')),
     '{{site_url}}' => $siteUrl,
     '{{site_name}}' => $siteName,
-    '{{quick_renew_link}}' => (string) ($recipient['quick_renew_url'] ?? ''),
+    '{{quick_renew_link}}' => $quickRenewLink,
+    '{{quick_renew_code}}' => (string) ($recipient['quick_renew_code'] ?? ''),
   ];
   return strtr($template, $replacements);
 }
@@ -120,11 +181,11 @@ function mem_campaign_build_recipients(int $campaignId): int {
     'INSERT INTO mem_campaign_recipient (
        campaign_id, member_id, membership_number, firstname, surname, full_name, email,
        address1, address2, town, county, country, postcode,
-       channel, status, exclusion_reason, quick_renew_url
+       channel, status, exclusion_reason, quick_renew_url, quick_renew_code
      ) VALUES (
        :campaign_id, :member_id, :membership_number, :firstname, :surname, :full_name, :email,
        :address1, :address2, :town, :county, :country, :postcode,
-       :channel, :status, :exclusion_reason, :quick_renew_url
+       :channel, :status, :exclusion_reason, :quick_renew_url, :quick_renew_code
      )'
   );
   $count = 0;
@@ -148,8 +209,9 @@ function mem_campaign_build_recipients(int $campaignId): int {
     }
 
     $renewUrl = null;
+    $renewCode = null;
     if ((string) $campaign['campaign_type'] === 'renewal' && $channel !== 'excluded') {
-      $token = mem_create_magic_link((int) $member['id'], 'renewal', 24 * 30);
+      $token = mem_create_magic_link((int) $member['id'], 'renewal', 24 * 30, $renewCode);
       if ($token) {
         $renewUrl = mem_base_url('/member-renew-quick.php?token=' . urlencode($token));
       }
@@ -173,6 +235,7 @@ function mem_campaign_build_recipients(int $campaignId): int {
       ':status' => $status,
       ':exclusion_reason' => $reason,
       ':quick_renew_url' => $renewUrl,
+      ':quick_renew_code' => $renewCode,
     ]);
     $count++;
   }

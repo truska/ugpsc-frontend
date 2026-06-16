@@ -77,6 +77,7 @@ mem_page_header('UGPSC Members | Login', ['active' => 'login']);
 
     <div class="mt-3 d-flex flex-column gap-1">
       <a href="<?php echo mem_h(mem_base_url('/member-forgot-password.php')); ?>">Forgot password?</a>
+      <a href="<?php echo mem_h(mem_base_url('/member-claim-account.php')); ?>">Claim an existing account</a>
       <a href="<?php echo mem_h(mem_base_url('/member-join.php?quick=1')); ?>">Quick Join (minimum details)</a>
     </div>
   </div>

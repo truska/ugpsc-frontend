@@ -23,9 +23,10 @@ $flow = trim((string) ($_POST['flow'] ?? ''));
 $transactionType = ($_POST['transaction_type'] ?? '') === 'renewal' ? 'renewal' : 'join';
 $currency = strtoupper(trim((string) ($_POST['currency'] ?? '')));
 $token = trim((string) ($_POST['token'] ?? ''));
+$code = mem_normalize_magic_code((string) ($_POST['code'] ?? ''));
 $clientMetadata = [];
 
-function mem_stripe_resolve_member(string $flow, string $token, array &$errors): ?array {
+function mem_stripe_resolve_member(string $flow, string $token, string $code, array &$errors): ?array {
   if ($flow === 'join') {
     $pending = $_SESSION['mem_join_payment'] ?? null;
     $createdAt = (int) ($pending['created_at'] ?? 0);
@@ -62,7 +63,9 @@ function mem_stripe_resolve_member(string $flow, string $token, array &$errors):
   }
 
   if ($flow === 'renew_quick') {
-    $linkData = mem_validate_magic_link($token, 'renewal');
+    $linkData = $token !== ''
+      ? mem_validate_magic_link($token, 'renewal')
+      : mem_validate_magic_code($code, 'renewal');
     if (!$linkData) {
       $errors[] = 'Renewal link invalid or expired.';
       return null;
@@ -82,7 +85,7 @@ function mem_stripe_resolve_member(string $flow, string $token, array &$errors):
 }
 
 $errors = [];
-$member = mem_stripe_resolve_member($flow, $token, $errors);
+$member = mem_stripe_resolve_member($flow, $token, $code, $errors);
 if (!$member) {
   mem_stripe_json_response(400, ['error' => implode(' ', $errors)]);
 }

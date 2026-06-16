@@ -263,7 +263,7 @@ if ($campaign && $output === 'csv') {
   header('Content-Type: text/csv; charset=UTF-8');
   header('Content-Disposition: attachment; filename="campaign-' . $campaignId . '-recipients.csv"');
   $out = fopen('php://output', 'wb');
-  fputcsv($out, ['Member Number', 'First Name', 'Surname', 'Email', 'Address 1', 'Address 2', 'Town', 'County', 'Country', 'Postcode', 'Channel', 'Status', 'Quick Renew URL'], ',', '"', '');
+  fputcsv($out, ['Member Number', 'First Name', 'Surname', 'Email', 'Address 1', 'Address 2', 'Town', 'County', 'Country', 'Postcode', 'Channel', 'Status', 'Quick Renew URL', 'Quick Renew Code'], ',', '"', '');
   foreach ($recipients as $recipient) {
     fputcsv($out, [
       $recipient['membership_number'],
@@ -279,6 +279,7 @@ if ($campaign && $output === 'csv') {
       $recipient['channel'],
       $recipient['status'],
       $recipient['quick_renew_url'],
+      $recipient['quick_renew_code'],
     ], ',', '"', '');
   }
   fclose($out);
@@ -291,15 +292,28 @@ if ($campaign && $output === 'csv') {
 }
 
 if ($campaign && $output === 'letters') {
+  $stationery = mem_campaign_letter_stationery();
   $letterRecipients = array_values(array_filter(
     $recipients,
     static fn(array $recipient): bool => (string) $recipient['channel'] === 'letter'
   ));
+  $testLetterPreview = false;
+  if (!$letterRecipients && $campaignTestMode) {
+    $letterRecipients = array_values(array_filter(
+      $recipients,
+      static fn(array $recipient): bool => (string) $recipient['channel'] !== 'excluded'
+    ));
+    $testLetterPreview = (bool) $letterRecipients;
+  }
   $pdo->prepare(
     'UPDATE mem_campaign_recipient SET status = "printed", printed_at = NOW(), modified = NOW()
      WHERE campaign_id = :id AND channel = "letter" AND status IN ("pending", "exported")'
   )->execute([':id' => $campaignId]);
-  mem_campaign_log($campaignId, 'letters_opened', count($letterRecipients) . ' letters opened for printing');
+  mem_campaign_log(
+    $campaignId,
+    $testLetterPreview ? 'letter_test_preview_opened' : 'letters_opened',
+    count($letterRecipients) . ($testLetterPreview ? ' test letters opened for preview' : ' letters opened for printing')
+  );
   ?>
   <!doctype html>
   <html lang="en">
@@ -309,19 +323,61 @@ if ($campaign && $output === 'letters') {
     <style>
       @page { size: A4 portrait; margin: 20mm; }
       body { margin: 0; color: #111; font: 11pt Arial, sans-serif; }
-      .letter { min-height: 250mm; break-after: page; page-break-after: always; }
+      .letter { break-after: page; page-break-after: always; }
       .letter:last-child { break-after: auto; page-break-after: auto; }
-      .address { margin: 0 0 18mm; line-height: 1.35; }
+      .letterhead { display: flex; align-items: flex-start; justify-content: space-between; gap: 10mm; padding-bottom: 4mm; margin-bottom: 9mm; border-bottom: 1px solid #bbb; }
+      .letterhead-logo { width: 30mm; max-height: 25mm; height: auto; object-fit: contain; object-position: left top; }
+      .organisation { flex: 1; text-align: right; font-size: 8.5pt; line-height: 1.35; }
+      .organisation-name { margin-bottom: 1mm; font-size: 12pt; font-weight: 700; }
+      .organisation-address { white-space: normal; }
+      .organisation-contact { margin-top: 1mm; }
+      .address { margin: 0 0 14mm; line-height: 1.35; }
       .content { line-height: 1.5; }
-      .member-number { margin-top: 18mm; font-size: 9pt; color: #555; }
+      .renewal-access { display: flex; align-items: center; justify-content: space-between; gap: 8mm; margin-top: 8mm; padding: 4mm; border: 1px solid #999; background: #f7f7f7; break-inside: avoid; page-break-inside: avoid; }
+      .renewal-details { flex: 1; }
+      .renewal-code { margin-top: 2mm; font-size: 16pt; font-weight: 700; letter-spacing: 0.18em; }
+      .letter-close { margin-top: 10mm; }
+      .sign-off { line-height: 1.5; }
+      .qr-code { width: 27mm; min-width: 27mm; height: 27mm; }
+      .qr-code img, .qr-code canvas { width: 27mm !important; height: 27mm !important; }
       .tools { margin: 12px; }
       @media print { .tools { display: none; } }
     </style>
   </head>
   <body>
     <div class="tools"><button type="button" onclick="window.print()">Print Letters</button></div>
+    <?php if ($testLetterPreview): ?>
+      <div class="tools" style="padding:10px;background:#fff3cd;border:1px solid #ffe69c;">
+        Development test preview using administrator recipients. No recipient status has been changed.
+      </div>
+    <?php endif; ?>
+    <?php if (!$letterRecipients): ?>
+      <div class="tools" style="padding:16px;border:1px solid #ccc;">
+        No letter recipients are available. Build the campaign audience first, or check that members without email have postal addresses.
+      </div>
+    <?php endif; ?>
     <?php foreach ($letterRecipients as $recipient): ?>
       <section class="letter">
+        <header class="letterhead">
+          <div>
+            <?php if ((string) ($stationery['logo_url'] ?? '') !== ''): ?>
+              <img class="letterhead-logo" src="<?php echo mem_h((string) $stationery['logo_url']); ?>" alt="<?php echo mem_h((string) $stationery['company']); ?> logo">
+            <?php endif; ?>
+          </div>
+          <div class="organisation">
+            <div class="organisation-name"><?php echo mem_h((string) $stationery['company']); ?></div>
+            <div class="organisation-address"><?php echo mem_h(implode(', ', (array) $stationery['address'])); ?></div>
+            <div class="organisation-contact">
+              <?php if ((string) ($stationery['email'] ?? '') !== ''): ?>
+                <?php echo mem_h((string) $stationery['email']); ?>
+              <?php endif; ?>
+              <?php if ((string) ($stationery['email'] ?? '') !== '' && (string) ($stationery['website'] ?? '') !== ''): ?>
+                &nbsp; | &nbsp;
+              <?php endif; ?>
+              <?php echo mem_h((string) $stationery['website']); ?>
+            </div>
+          </div>
+        </header>
         <div class="address">
           <?php foreach (['full_name', 'address1', 'address2', 'town', 'county', 'postcode', 'country'] as $field): ?>
             <?php if (trim((string) ($recipient[$field] ?? '')) !== ''): ?>
@@ -332,11 +388,51 @@ if ($campaign && $output === 'letters') {
         <?php if (!empty($campaign['image_url'])): ?>
           <p><img src="<?php echo mem_h((string) $campaign['image_url']); ?>" alt="" style="max-width:100%;max-height:55mm;width:auto;"></p>
         <?php endif; ?>
-        <div class="content"><?php echo mem_campaign_render((string) $campaign['letter_html'], $recipient, $campaign); ?></div>
-        <div class="member-number">Membership #<?php echo (int) $recipient['membership_number']; ?></div>
+        <div class="content"><?php echo mem_campaign_render((string) $campaign['letter_html'], $recipient, $campaign, 'letter'); ?></div>
+        <?php if ((string) $campaign['campaign_type'] === 'renewal' && (string) ($recipient['quick_renew_code'] ?? '') !== ''): ?>
+          <div class="renewal-access">
+            <div class="renewal-details">
+              <strong>Renew online:</strong>
+              Visit <?php echo mem_h(mem_base_url('/member-renew-code.php')); ?> and enter this code:
+              <div class="renewal-code"><?php echo mem_h((string) $recipient['quick_renew_code']); ?></div>
+            </div>
+            <?php if ((string) ($recipient['quick_renew_url'] ?? '') !== ''): ?>
+              <div
+                class="qr-code"
+                data-qr-url="<?php echo mem_h(mem_campaign_absolute_url((string) $recipient['quick_renew_url'])); ?>"
+                aria-label="QR code for online membership renewal"
+              ></div>
+            <?php endif; ?>
+          </div>
+        <?php endif; ?>
+        <div class="letter-close">
+          <div class="sign-off">
+            Kind regards<br>
+            <strong><?php echo mem_h((string) $stationery['company']); ?></strong>
+          </div>
+        </div>
       </section>
     <?php endforeach; ?>
-    <script>window.addEventListener('load', function () { window.print(); });</script>
+    <?php if ($letterRecipients): ?>
+      <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+      <script>
+        window.addEventListener('load', function () {
+          document.querySelectorAll('[data-qr-url]').forEach(function (element) {
+            if (typeof QRCode !== 'undefined') {
+              new QRCode(element, {
+                text: element.getAttribute('data-qr-url'),
+                width: 128,
+                height: 128,
+                correctLevel: QRCode.CorrectLevel.M
+              });
+            }
+          });
+          window.setTimeout(function () {
+            window.print();
+          }, 350);
+        });
+      </script>
+    <?php endif; ?>
   </body>
   </html>
   <?php
@@ -452,7 +548,7 @@ mem_page_header('UGPSC Admin | Lists & Campaigns', ['active' => 'admin']);
           <label class="form-label mem-label" for="image_url">Optional Image URL</label>
           <input class="form-control" type="url" id="image_url" name="image_url" placeholder="https://...">
           <div class="small text-secondary mt-1">Allowed formatting: headings, paragraphs, bold, italic, links and lists.</div>
-          <div class="small text-secondary">Merge tags: {{first_name}}, {{full_name}}, {{member_number}}, {{address}}, {{year}}, {{site_url}}, {{site_name}}, {{quick_renew_link}}</div>
+          <div class="small text-secondary">Merge tags: {{first_name}}, {{full_name}}, {{member_number}}, {{address}}, {{year}}, {{site_url}}, {{site_name}}, {{quick_renew_link}}, {{quick_renew_code}}</div>
         </div>
         <div class="col-12 d-flex gap-2">
           <button class="btn btn-card-action" type="submit">Create Draft</button>
@@ -590,7 +686,7 @@ mem_page_header('UGPSC Admin | Lists & Campaigns', ['active' => 'admin']);
             ?>
             <div class="row g-3">
               <div class="col-lg-6"><div class="mem-label mb-2">Email</div><div class="p-4 border rounded"><?php echo mem_campaign_render((string) $campaign['email_html'], $sample, $campaign); ?></div></div>
-              <div class="col-lg-6"><div class="mem-label mb-2">Letter</div><div class="p-4 border rounded"><?php echo mem_campaign_render((string) $campaign['letter_html'], $sample, $campaign); ?></div></div>
+              <div class="col-lg-6"><div class="mem-label mb-2">Letter</div><div class="p-4 border rounded"><?php echo mem_campaign_render((string) $campaign['letter_html'], $sample, $campaign, 'letter'); ?></div></div>
             </div>
           </div>
           <div class="tab-pane fade" id="activity">

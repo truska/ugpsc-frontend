@@ -2,7 +2,10 @@
 require_once __DIR__ . '/includes/member/ui.php';
 
 $token = trim((string) ($_GET['token'] ?? $_POST['token'] ?? ''));
-$linkData = mem_validate_magic_link($token, 'renewal');
+$code = mem_normalize_magic_code((string) ($_GET['code'] ?? $_POST['code'] ?? ''));
+$linkData = $token !== ''
+  ? mem_validate_magic_link($token, 'renewal')
+  : mem_validate_magic_code($code, 'renewal');
 $error = null;
 $tokenInvalid = false;
 
@@ -53,6 +56,7 @@ mem_page_header('UGPSC Members | Quick Renew', ['active' => 'join']);
             <div class="mem-label mb-2">Card Details</div>
             <form id="stripe-form" novalidate>
               <input type="hidden" id="token" value="<?php echo mem_h($token); ?>">
+              <input type="hidden" id="renewal-code" value="<?php echo mem_h($code); ?>">
               <div class="mb-3">
                 <label class="mem-label" for="card_name">Name on card</label>
                 <input type="text" id="card_name" name="card_name" class="form-control" required>
@@ -110,6 +114,7 @@ mem_page_header('UGPSC Members | Quick Renew', ['active' => 'join']);
   const payAmount = document.getElementById('pay-amount');
   const currencyValue = 'GBP';
   const tokenField = document.getElementById('token');
+  const renewalCodeField = document.getElementById('renewal-code');
   const memberEmail = '<?php echo mem_h((string) ($member['email'] ?? '')); ?>';
   const memberPhone = '<?php echo mem_h((string) ($member['tel1'] ?? '')); ?>';
   const memberCountry = '<?php echo mem_h(mem_stripe_country_code((string) ($member['country'] ?? '')) ?? ''); ?>';
@@ -136,6 +141,7 @@ mem_page_header('UGPSC Members | Quick Renew', ['active' => 'join']);
     formData.append('transaction_type', 'renewal');
     formData.append('flow', 'renew_quick');
     formData.append('token', tokenField.value);
+    formData.append('code', renewalCodeField.value);
     formData.append('currency', currencyValue);
 
     fetch('<?php echo mem_base_url('/member-stripe.php'); ?>', {
@@ -191,6 +197,7 @@ mem_page_header('UGPSC Members | Quick Renew', ['active' => 'join']);
       finalizeData.append('transaction_type', 'renewal');
       finalizeData.append('flow', 'renew_quick');
       finalizeData.append('token', tokenField.value);
+      finalizeData.append('code', renewalCodeField.value);
       finalizeData.append('payment_intent_id', paymentIntent.id);
       fetch('<?php echo mem_base_url('/member-stripe.php'); ?>', {
         method: 'POST',
